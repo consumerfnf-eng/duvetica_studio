@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DUVETICA · AI IMAGE DESIGN STUDIO</title>
+<style>
+:root{
+  --ink:#17160F; --ink-70:rgba(23,22,15,.7); --ink-45:rgba(23,22,15,.45);
+  --paper:#F6F3EC; --card:#FCFAF4; --white:#FFFFFF;
+  --sand:#C9BBA0; --line:#E4DDCD; --line-2:#EDE7DA;
+  --pine:#38473C; --pine-d:#2A362E; --pine-l:#4E6155;
+  --alert:#9A4A32; --ok:#4E6155; --plum:#6B5B95;
+  --shadow:0 1px 2px rgba(23,22,15,.05),0 8px 24px rgba(23,22,15,.06);
+  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --mono:ui-monospace,'SF Mono','Cascadia Code',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit;font-size:13px;color:var(--ink)}
+a{color:var(--pine)}
+header{position:sticky;top:0;z-index:50;background:rgba(246,243,236,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{max-width:1420px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:24px}
+.wordmark{font-family:var(--serif);font-weight:400;letter-spacing:.42em;font-size:16px;text-transform:uppercase;padding-right:22px;border-right:1px solid var(--line);white-space:nowrap}
+.wordmark small{display:block;letter-spacing:.28em;font-size:9px;color:var(--ink-45);margin-top:3px}
+nav{display:flex;gap:2px;flex:1}
+nav button{background:none;border:none;padding:9px 15px;font-size:12.5px;letter-spacing:.04em;color:var(--ink-45);border-radius:7px;transition:.15s}
+nav button:hover{color:var(--ink);background:var(--line-2)}
+nav button.on{color:var(--ink);background:var(--white);box-shadow:var(--shadow);font-weight:600}
+.keydot{width:8px;height:8px;border-radius:50%;background:var(--alert)}
+.keydot.ok{background:var(--ok)}
+main{max-width:1420px;margin:0 auto;padding:26px 24px 90px}
+.view{display:none}
+.view.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.eyebrow{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-45);margin:0 0 6px}
+h1.title{font-family:var(--serif);font-weight:400;font-size:27px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink-70);font-size:13px;margin:0 0 22px;max-width:720px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.panel + .panel{margin-top:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-gen{display:grid;grid-template-columns:1.1fr .9fr;gap:20px;align-items:start}
+@media(max-width:980px){.grid-gen,.grid2{grid-template-columns:1fr}}
+label.fld{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-45);margin:0 0 6px}
+.inp,textarea.inp,select.inp{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--white);outline:none}
+.inp:focus,textarea.inp:focus{border-color:var(--pine-l)}
+textarea.inp{resize:vertical;min-height:60px;line-height:1.55}
+textarea.mono{font-family:var(--mono);font-size:11px;line-height:1.5}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--white);color:var(--ink);padding:9px 15px;border-radius:9px;font-size:13px;font-weight:500;transition:.15s;display:inline-flex;gap:7px;align-items:center}
+.btn:hover{border-color:var(--pine-l)}
+.btn.primary{background:var(--pine);border-color:var(--pine);color:#F4F1E7;font-weight:600}
+.btn.primary:hover{background:var(--pine-d)}
+.btn.primary:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:none;border-color:transparent;color:var(--ink-45);padding:6px 8px}
+.btn.ghost:hover{color:var(--alert);background:var(--line-2)}
+.btn.sm{padding:6px 10px;font-size:12px}
+.tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:none;border-bottom:2px solid transparent;padding:8px 4px;margin-right:16px;color:var(--ink-45);font-size:13.5px}
+.tabs button.on{color:var(--ink);border-color:var(--pine);font-weight:600}
+.count{font-size:11px;color:var(--ink-45);background:var(--line-2);border-radius:20px;padding:1px 8px;margin-left:5px}
+.drop{border:1.5px dashed var(--line);border-radius:12px;padding:20px;text-align:center;color:var(--ink-45);background:var(--white);transition:.15s;cursor:pointer}
+.drop:hover,.drop.hot{border-color:var(--pine-l);color:var(--pine);background:#FbFaf5}
+.drop b{color:var(--ink);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:12px}
+.cards.lg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.card{background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;transition:.15s}
+.card:hover{border-color:var(--sand);box-shadow:var(--shadow)}
+.card .thumb{aspect-ratio:3/4;background:var(--line-2) center/cover no-repeat;display:block;cursor:pointer}
+.card.sw .thumb{aspect-ratio:1/1}
+.card .meta{padding:7px 9px}
+.card .nm{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .tg{font-size:10px;color:var(--ink-45);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .x{position:absolute;top:6px;right:6px;width:23px;height:23px;border-radius:6px;border:none;background:rgba(255,255,255,.92);color:var(--alert);font-size:13px;line-height:1;opacity:.65;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.card:hover .x{opacity:1}
+.card.sel{outline:2px solid var(--pine);outline-offset:-2px}
+.card .pick{position:absolute;top:6px;left:6px;width:19px;height:19px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid var(--line);display:none;align-items:center;justify-content:center;font-size:10px;color:var(--pine);font-weight:700}
+.card.sel .pick{display:flex}
+.chip{display:inline-block;font-size:10.5px;padding:2px 8px;border:1px solid var(--line);border-radius:20px;color:var(--ink-70);margin:2px 4px 0 0}
+.chip.pine{border-color:var(--pine-l);color:var(--pine);background:#fff}
+.empty{padding:30px;text-align:center;color:var(--ink-45);font-size:13px;border:1px dashed var(--line);border-radius:12px;background:var(--white)}
+.slider-wrap{margin-top:14px}
+.slider-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.slider-head .lab{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-70);font-weight:600}
+.slider-head .val{font-size:12px;color:var(--pine);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:4px;background:var(--line);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--pine);border:2px solid var(--white);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--pine);border:2px solid var(--white);cursor:pointer}
+.slider-hint{font-size:11px;color:var(--ink-45);margin-top:3px}
+.preview{aspect-ratio:3/4;background:var(--line-2);border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+.preview img{width:100%;height:100%;object-fit:cover;display:block}
+.preview .ph{color:var(--ink-45);font-size:12.5px;text-align:center;padding:20px}
+.preview.multi{aspect-ratio:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;background:transparent}
+.preview.multi img{width:100%;aspect-ratio:3/4;border-radius:10px}
+.spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--pine);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load{position:absolute;inset:0;background:rgba(252,250,244,.86);display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;font-size:12px;color:var(--pine)}
+.promptbox{margin-top:10px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:11.5px;color:var(--ink-70);line-height:1.55;white-space:pre-wrap;max-height:200px;overflow:auto}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.cmp .caphead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.cmp .caphead .t{font-family:var(--serif);font-size:15px}
+.cmp .caphead .s{font-size:11px;color:var(--ink-45);letter-spacing:.1em;text-transform:uppercase}
+.cmp .frame{aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:var(--line-2)}
+.cmp .frame img{width:100%;height:100%;object-fit:cover}
+.difftable{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+.difftable td{padding:7px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
+.difftable td:first-child{color:var(--ink-45);width:118px;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+.modal{position:fixed;inset:0;z-index:200;background:rgba(23,22,15,.42);display:none;align-items:center;justify-content:center;padding:24px}
+.modal.on{display:flex}
+.sheet{background:var(--paper);border-radius:16px;max-width:980px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.sheet.wide{max-width:1060px}
+.sheet-h{position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);padding:16px 22px;display:flex;justify-content:space-between;align-items:center;z-index:2}
+.sheet-h .t{font-family:var(--serif);font-size:18px}
+.sheet-b{padding:22px}
+.editgrid{display:grid;grid-template-columns:340px 1fr;gap:22px}
+@media(max-width:760px){.editgrid{grid-template-columns:1fr}}
+.miniver{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.miniver img{width:52px;height:70px;object-fit:cover;border-radius:7px;border:1px solid var(--line);cursor:pointer}
+.miniver img.on{outline:2px solid var(--pine);outline-offset:-2px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#F4F1E7;padding:11px 20px;border-radius:24px;font-size:13px;opacity:0;transition:.25s;z-index:300;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:80vw;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.hint{font-size:11.5px;color:var(--ink-45);margin-top:6px}
+.divider{height:1px;background:var(--line);margin:18px 0}
+.pillrow{display:flex;gap:6px;flex-wrap:wrap}
+.togglepill{font-size:11.5px;padding:5px 11px;border:1px solid var(--line);border-radius:20px;background:var(--white);color:var(--ink-70);transition:.12s}
+.togglepill:hover{border-color:var(--pine-l)}
+.togglepill.on{background:var(--pine);border-color:var(--pine);color:#F4F1E7}
+.togglepill.rep.on{background:var(--alert);border-color:var(--alert)}
+.togglepill.adopt.on{background:var(--plum);border-color:var(--plum)}
+.sectlabel{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-45);margin:20px 0 8px;font-weight:600}
+.sectlabel:first-child{margin-top:0}
+.grouplabel{font-size:11px;color:var(--ink-45);margin:10px 0 5px}
+/* pick bar */
+.pickbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.thumbchip{display:flex;align-items:center;gap:7px;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:5px 9px 5px 5px}
+.thumbchip img{width:34px;height:44px;object-fit:cover;border-radius:6px}
+.thumbchip span{font-size:12px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumbchip button{border:none;background:none;color:var(--alert);cursor:pointer;font-size:12px;padding:0 2px}
+.addarch{border-style:dashed}
+/* archive browser */
+.arch-tools{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.arch-search{flex:0 0 300px;padding:8px 14px;border:1px solid var(--line);border-radius:22px;background:var(--white);outline:none}
+.arch-search:focus{border-color:var(--pine-l)}
+.arch-count{font-size:12px;color:var(--ink-45)}
+.arch-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chipgroup{display:flex;gap:5px;flex-wrap:wrap;align-items:center;width:100%;margin-bottom:5px}
+.chiplabel{font-size:10px;letter-spacing:.06em;color:var(--ink-45);width:48px;flex:0 0 48px}
+.arch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-height:58vh;overflow:auto;padding:2px}
+@media(max-width:760px){.arch-grid{grid-template-columns:repeat(2,1fr)}}
+.acard{background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;position:relative;transition:.12s}
+.acard:hover{border-color:var(--sand);box-shadow:var(--shadow)}
+.acard.sel{outline:2px solid var(--pine);outline-offset:-2px}
+.acard .thumb{aspect-ratio:3/4;background:var(--line-2) center/cover no-repeat;display:block}
+.acard .meta{padding:8px 10px}
+.acard .br{font-size:9px;letter-spacing:.08em;color:var(--sand);text-transform:uppercase;font-weight:600}
+.acard .nm{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acard .tg{font-size:10px;color:var(--ink-45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acard .pick{position:absolute;top:8px;left:8px;width:20px;height:20px;border-radius:50%;background:var(--pine);color:#fff;display:none;align-items:center;justify-content:center;font-size:11px}
+.acard.sel .pick{display:flex}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small></div>
+    <nav id="nav">
+      <button data-v="lib" class="on">라이브러리</button>
+      <button data-v="gen">생성</button>
+      <button data-v="gallery">갤러리</button>
+      <button data-v="compare">비교</button>
+      <button data-v="settings">설정</button>
+    </nav>
+    <div class="row" style="gap:7px"><span id="keydot" class="keydot"></span><span id="keylabel" style="font-size:11px;color:var(--ink-45)">키 미설정</span></div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ LIBRARY ============ -->
+  <section class="view on" id="v-lib">
+    <p class="eyebrow">Archive</p>
+    <h1 class="title">라이브러리 저장고</h1>
+    <p class="sub">시즌별 라인, 레퍼런스, 기본모델, SHELL 원단을 미리 넣어두세요. 생성 탭에서는 아카이브를 스크롤·검색하며 셀렉합니다. 브라우저에 저장되어 다시 열어도 유지됩니다.</p>
+    <div class="tabs" id="libtabs">
+      <button data-t="lines" class="on">라인 (시즌) <span class="count" id="c-lines">0</span></button>
+      <button data-t="refs">레퍼런스 <span class="count" id="c-refs">0</span></button>
+      <button data-t="models">기본모델 <span class="count" id="c-models">0</span></button>
+      <button data-t="fabrics">SHELL 원단 <span class="count" id="c-fabrics">0</span></button>
+    </div>
+    <div id="lib-lines" class="libpane">
+      <div class="panel">
+        <div class="drop" data-store="lines"><b>라인 이미지 올리기</b><br><span style="font-size:12px">기존 룩북 컷 · 여러 장 한번에 · 파일명 <b>성별_카테고리_시즌_아이템명</b> 이면 자동 분류</span></div>
+        <div class="arch-chips" id="lib-lines-chips" style="margin:14px 0 0"></div>
+        <div id="grid-lines" class="cards lg"></div>
+      </div>
+    </div>
+    <div id="lib-refs" class="libpane" style="display:none">
+      <div class="panel">
+        <div class="drop" data-store="refs"><b>레퍼런스 이미지 올리기</b><br><span style="font-size:12px">채용할 디자인(카라·퀼팅·실루엣·핏) 레퍼런스 · 파일명 <b>성별_카테고리_시즌_이름</b> 이면 자동 분류</span></div>
+        <div class="arch-chips" id="lib-refs-chips" style="margin:14px 0 0"></div>
+        <div id="grid-refs" class="cards lg"></div>
+      </div>
+    </div>
+    <div id="lib-models" class="libpane" style="display:none">
+      <div class="panel">
+        <div class="drop" data-store="models"><b>기본모델(참고) 이미지 올리기</b><br><span style="font-size:12px">모델·포즈 교체용 — 선택 시 이 모델로 바뀝니다</span></div>
+        <div id="grid-models" class="cards lg"></div>
+      </div>
+    </div>
+    <div id="lib-fabrics" class="libpane" style="display:none">
+      <div class="panel">
+        <div class="drop" data-store="fabrics"><b>SHELL 원단 스와치 올리기</b><br><span style="font-size:12px">나일론·태피터 등 표면/광택 레퍼런스</span></div>
+        <div id="grid-fabrics" class="cards"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GENERATE ============ -->
+  <section class="view" id="v-gen">
+    <p class="eyebrow">Generate · Brief → JSON → Prompt</p>
+    <h1 class="title">시즌 생성</h1>
+    <p class="sub">카테고리에 따라 생성 기준이 바뀝니다 — 아우터면 아우터를, 하의면 하의를 교체·생성합니다. 아카이브에서 베이스·레퍼런스를 셀렉하고 무엇을 유지·교체·채용할지 지정하면, 디자인 분석 JSON을 거쳐 프롬프트가 만들어집니다.</p>
+    <div class="grid-gen">
+      <div>
+        <div class="panel">
+          <div class="row" style="gap:12px">
+            <div style="flex:1"><label class="fld">타깃 시즌 (기획)</label><select id="season" class="inp"></select></div>
+            <div style="flex:1"><label class="fld">카테고리</label><select id="cat-parent" class="inp"><option>OUTERWEAR</option><option>BOTTOMS</option></select></div>
+            <div style="flex:1.2"><label class="fld">서브</label><select id="cat-sub" class="inp"></select></div>
+          </div>
+          <div class="sectlabel">1 · 베이스 라인 <span id="prevlabel" class="chip pine"></span> <span class="hint" style="margin:0">— 모델·포즈·나머지 스타일링을 유지할 원본</span></div>
+          <div id="pick-lines" class="pickbar"></div>
+          <div class="sectlabel">2 · 레퍼런스 <span class="hint" style="margin:0">— 선택 카테고리 디자인을 채용 (여러 장)</span></div>
+          <div id="pick-refs" class="pickbar"></div>
+          <div class="grid2" style="gap:18px">
+            <div><div class="sectlabel">3 · 모델</div>
+              <select id="model-source" class="inp" style="margin-bottom:6px"><option value="idol">기본 아이돌 프롬프트</option><option value="preserve">베이스 라인 모델 유지</option></select>
+              <div class="hint" style="margin:0 0 8px">아래에서 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
+              <div id="pick-models" class="cards"></div></div>
+            <div><div class="sectlabel">4 · SHELL 원단 (선택)</div><div id="pick-fabrics" class="cards"></div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="panel" style="position:sticky;top:82px">
+          <div class="sectlabel">유지 · 교체 · 채용 <span class="hint" id="cat-tag" style="margin:0"></span></div>
+          <div class="grouplabel" style="color:var(--pine);font-weight:600;margin-top:0">PRESERVE — 베이스에서 유지</div>
+          <div class="pillrow" id="keep-pills"></div>
+          <div class="grouplabel" style="color:var(--alert);font-weight:600">REPLACE — 교체</div>
+          <div class="pillrow" id="replace-pills"></div>
+          <div class="grouplabel" style="color:var(--plum);font-weight:600">ADOPT FROM REF — 레퍼런스에서 채용</div>
+          <div class="pillrow" id="adopt-pills"></div>
+          <div class="hint" id="adopt-hint" style="margin:5px 0 0">레퍼런스는 이미지만으론 약하게 반영돼요 — 'AI 분석'으로 속성을 채우거나, 추가 디렉션에 구조(예: 넥라인을 스카프 랩으로)를 적으면 강하게 반영됩니다.</div>
+
+          <div class="slider-wrap">
+            <div class="slider-head"><span class="lab">디자인 반영 밸런스</span><span class="val" id="balance-v">35</span></div>
+            <input type="range" id="balance" min="0" max="100" value="35">
+            <div class="row" style="justify-content:space-between;margin-top:3px"><span class="slider-hint" style="margin:0">◀ 듀베티카 라인</span><span class="slider-hint" id="balance-h" style="margin:0;color:var(--pine);font-weight:600"></span><span class="slider-hint" style="margin:0">레퍼런스 ▶</span></div>
+          </div>
+
+          <div class="sectlabel">소재 / FABRIC</div>
+          <div class="pillrow" id="fabric-pills"></div>
+          <div class="slider-wrap">
+            <div class="slider-head"><span class="lab">Sheer 시스루</span><span class="val" id="sheer-v">20</span></div>
+            <input type="range" id="sheer" min="0" max="100" value="20"><div class="slider-hint" id="sheer-h"></div>
+          </div>
+          <div class="slider-wrap">
+            <div class="slider-head"><span class="lab">Shimmer 광택</span><span class="val" id="shimmer-v">25</span></div>
+            <input type="range" id="shimmer" min="0" max="100" value="25"><div class="slider-hint" id="shimmer-h"></div>
+          </div>
+
+          <div style="margin-top:16px"><label class="fld">추가 디렉션 (선택)</label>
+            <textarea id="extra" class="inp" placeholder="예: 벨티드 실루엣, 페이크퍼 트리밍, 딥 버건디 컬러웨이…"></textarea></div>
+
+          <div class="row" style="justify-content:space-between;margin-top:16px">
+            <span class="sectlabel" style="margin:0">디자인 분석 JSON</span>
+            <div class="row" style="gap:6px">
+              <button class="btn sm" id="btn-analyze" title="레퍼런스를 비전 모델로 읽어 속성 채우기">AI 분석</button>
+              <button class="btn sm ghost" id="btn-rebuild" title="컨트롤 값으로 JSON 다시 만들기">브리프로 재생성</button>
+            </div>
+          </div>
+          <textarea id="designjson" class="inp mono" style="min-height:150px"></textarea>
+          <div class="hint" id="json-hint">컨트롤을 바꾸면 자동 갱신됩니다. JSON을 직접 수정하면 그 값이 우선하며, '브리프로 재생성'으로 되돌립니다.</div>
+
+          <details style="margin-top:10px"><summary style="font-size:12px;color:var(--ink-45);cursor:pointer">최종 프롬프트 미리보기</summary><div id="promptprev" class="promptbox"></div></details>
+
+          <div class="row" style="justify-content:space-between;margin-top:14px"><label class="fld" style="margin:0">생성 장수</label><select id="gen-n" class="inp" style="width:90px"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+          <button id="btn-gen" class="btn primary" style="width:100%;justify-content:center;margin-top:10px">이미지 생성</button>
+          <div class="preview" style="margin-top:14px" id="gen-preview"><div class="ph">셀렉 후 생성하면 여기에 결과가 나오고 갤러리에 저장됩니다.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GALLERY ============ -->
+  <section class="view" id="v-gallery">
+    <p class="eyebrow">Gallery</p>
+    <h1 class="title">생성 갤러리</h1>
+    <p class="sub">생성 결과를 모아봅니다. 카드를 눌러 모델 변경 · 코디 변경 · SHEER/SHIMMER 재조절. 로고는 기본으로 합성됩니다.</p>
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <div class="pillrow" id="gal-filter"></div>
+      <label class="row" style="font-size:12px;color:var(--ink-70);gap:6px"><input type="checkbox" id="showlogo" checked> 로고 표시</label>
+    </div>
+    <div id="grid-gallery" class="cards lg"></div>
+  </section>
+
+  <!-- ============ COMPARE ============ -->
+  <section class="view" id="v-compare">
+    <p class="eyebrow">Compare</p>
+    <h1 class="title">이전 라인 대비 비교</h1>
+    <p class="sub">생성물을 고르면 원본 라인과 나란히 놓고, 무엇을 유지·교체·채용했는지와 소재·밸런스·프롬프트 변화를 짚어줍니다.</p>
+    <div class="panel">
+      <label class="fld">비교할 생성물</label>
+      <select id="cmp-select" class="inp" style="max-width:440px"></select>
+      <div id="cmp-body" style="margin-top:20px"></div>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section class="view" id="v-settings">
+    <p class="eyebrow">Settings</p>
+    <h1 class="title">설정</h1>
+    <p class="sub">OpenAI 키·모델, DUVETICA 로고, 그리고 항상 적용되는 브랜드 DNA 룰을 관리합니다. 모든 값은 이 브라우저에만 저장됩니다.</p>
+    <div class="grid2">
+      <div class="panel">
+        <div class="sectlabel">OpenAI</div>
+        <label class="fld">API Key</label>
+        <input id="s-key" class="inp" type="password" placeholder="sk-...">
+        <div class="row" style="margin-top:12px">
+          <div style="flex:1"><label class="fld">이미지 모델</label><input id="s-model" class="inp" value="gpt-image-2"></div>
+          <div style="width:130px"><label class="fld">사이즈</label>
+            <select id="s-size" class="inp"><option>1024x1536</option><option>1024x1024</option><option>1536x1024</option><option>auto</option></select></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div style="flex:1"><label class="fld">품질</label>
+            <select id="s-quality" class="inp"><option>high</option><option>medium</option><option>low</option><option>auto</option></select></div>
+          <div style="flex:1"><label class="fld">분석/비교용 비전 모델</label><input id="s-vision" class="inp" value="gpt-4o-mini"></div>
+          <div style="width:90px"><label class="fld">기본 장수</label><select id="s-gencount" class="inp"><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
+        </div>
+        <label class="fld" style="margin-top:12px">API Base URL (프록시/Azure 시 변경)</label>
+        <input id="s-base" class="inp" value="https://api.openai.com/v1">
+        <div class="hint">브라우저에서 직접 호출합니다. 사내 전용 도구 기준 키 노출 점 참고.</div>
+      </div>
+      <div class="panel">
+        <div class="sectlabel">DUVETICA 로고</div>
+        <div class="drop" id="drop-logo" style="padding:14px"><b>로고 PNG 올리기</b><br><span style="font-size:12px">투명 배경 권장 · 미설정 시 워드마크 텍스트</span></div>
+        <div id="logo-prev" style="margin-top:10px;text-align:center"></div>
+        <div class="row" style="margin-top:10px">
+          <div style="flex:1"><label class="fld">위치</label>
+            <select id="s-logopos" class="inp"><option value="bl">좌하단</option><option value="br">우하단</option><option value="bc" selected>하단 중앙</option><option value="tl">좌상단</option></select></div>
+          <div style="flex:1"><label class="fld">색(텍스트)</label>
+            <select id="s-logocolor" class="inp"><option value="dark">다크</option><option value="light">라이트</option></select></div>
+          <div style="width:82px"><label class="fld">크기 %</label><input id="s-logosize" class="inp" type="number" value="15" min="6" max="40"></div>
+        </div>
+        <label class="row" style="font-size:12px;color:var(--ink-70);gap:6px;margin-top:10px"><input type="checkbox" id="s-logodefault" checked> 생성물에 로고 기본 적용</label>
+        <button class="btn sm ghost" id="btn-logoclear" style="margin-top:4px">로고 이미지 제거</button>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="sectlabel">기본 모델 · 씬 프롬프트 (모델 이미지 미선택 시 사용)</div>
+      <textarea id="s-basemodel" class="inp" style="min-height:90px;font-size:12px"></textarea>
+      <div class="hint">모델 이미지를 안 넣고 '기본 아이돌 프롬프트' 모드일 때 이 설명으로 모델·배경이 생성됩니다.</div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="sectlabel">DUVETICA DESIGN DNA · 고정 룰 (모든 생성에 적용)</div>
+      <textarea id="s-dna" class="inp" style="min-height:150px;font-size:12px"></textarea>
+      <div class="hint">레퍼런스가 없어도 항상 프롬프트 앞단에 적용됩니다. 필요 시 편집하세요.</div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between"><div class="sectlabel" style="margin:0">공용 저장 · Supabase</div><span id="cloud-status" class="chip">로컬 전용</span></div>
+      <div class="hint" style="margin-top:4px">채우면 라이브러리·갤러리가 클라우드에 저장되어 <b>어느 기기에서 열어도 동일</b>하게 뜹니다. 회사 공용은 배포 파일 상단 상수(SUPABASE_URL/KEY)에 직접 넣는 걸 권장합니다. (OpenAI 키·로고는 클라우드에 올리지 않습니다.)</div>
+      <div class="row" style="margin-top:12px">
+        <div style="flex:2"><label class="fld">Supabase URL</label><input id="s-supaurl" class="inp" placeholder="https://xxxx.supabase.co"></div>
+        <div style="width:150px"><label class="fld">Storage 버킷</label><input id="s-supabucket" class="inp" placeholder="duvetica-studio"></div>
+      </div>
+      <label class="fld" style="margin-top:12px">anon public key</label>
+      <input id="s-supakey" class="inp" type="password" placeholder="eyJhbGciOi...">
+      <div class="row" style="margin-top:12px"><button class="btn sm" id="btn-cloudtest">연결 테스트</button><button class="btn sm" id="btn-cloudmigrate">로컬 데이터 → 클라우드 업로드</button></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between">
+        <div><b>저장</b><div class="hint" style="margin:2px 0 0">설정·DNA를 저장합니다.</div></div>
+        <button class="btn primary" id="btn-savesettings">설정 저장</button>
+      </div>
+      <div class="divider"></div>
+      <div class="row" style="justify-content:space-between">
+        <div><b>데이터 백업</b><div class="hint" style="margin:2px 0 0">라이브러리+갤러리(JSON·프롬프트 포함) 전체 내보내기/복원. 러닝 데이터로 활용.</div></div>
+        <div class="row"><button class="btn sm" id="btn-export">내보내기</button><button class="btn sm" id="btn-exportds">학습셋만 내보내기</button><button class="btn sm" id="btn-import">가져오기</button></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="modal">
+  <div class="sheet" id="sheet">
+    <div class="sheet-h"><span class="t" id="m-title">수정</span><button class="btn ghost" id="m-close">닫기 ✕</button></div>
+    <div class="sheet-b" id="m-body"></div>
+  </div>
+</div>
+<div id="toast"></div>
+<input type="file" id="hidden-file" accept="image/*" multiple style="display:none">
+<input type="file" id="hidden-json" accept="application/json" style="display:none">
+
+<script>
+"use strict";
+/* ============================================================
+   DUVETICA AI IMAGE DESIGN STUDIO v3
+   Category-driven (OUTERWEAR/BOTTOMS) · Archive browser
+   Brief → Design Analysis JSON → Final Prompt → gpt-image-1
+   ============================================================ */
+
+/* ---------- storage ---------- */
+const STORES=['settings','lines','refs','models','fabrics','gallery'];
+let db=null,memMode=false;
+const mem={settings:new Map(),lines:new Map(),refs:new Map(),models:new Map(),fabrics:new Map(),gallery:new Map()};
+function openDB(){return new Promise(res=>{try{
+  const r=indexedDB.open('duvetica_studio',2);
+  r.onupgradeneeded=e=>{const d=e.target.result;STORES.forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});};
+  r.onsuccess=e=>{db=e.target.result;res(true);};
+  r.onerror=()=>{memMode=true;res(false);};r.onblocked=()=>{memMode=true;res(false);};
+}catch(e){memMode=true;res(false);}});}
+function tx(s,m){return db.transaction(s,m).objectStore(s);}
+async function allOf(s){if(memMode)return[...mem[s].values()];return new Promise((res,rej)=>{const q=tx(s,'readonly').getAll();q.onsuccess=()=>res(q.result||[]);q.onerror=()=>rej(q.error);});}
+async function putOf(s,v){if(memMode){mem[s].set(v.id,v);return v;}return new Promise((res,rej)=>{const q=tx(s,'readwrite').put(v);q.onsuccess=()=>res(v);q.onerror=()=>rej(q.error);});}
+async function delOf(s,id){if(memMode){mem[s].delete(id);return;}return new Promise((res,rej)=>{const q=tx(s,'readwrite').delete(id);q.onsuccess=()=>res();q.onerror=()=>rej(q.error);});}
+async function getOf(s,id){if(memMode)return mem[s].get(id)||null;return new Promise((res,rej)=>{const q=tx(s,'readonly').get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
+
+/* ============================================================
+   CLOUD (Supabase) — 회사 공용 저장
+   배포 전 아래 3줄만 채우면 어느 기기에서 열어도 같은 데이터가 뜹니다.
+   (anon 키는 공개되어도 되는 키입니다. RLS 정책으로 보호)
+   ============================================================ */
+const SUPABASE_URL='https://batnckyzqsaszaoyiwsk.supabase.co';        // 회사 공용
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhdG5ja3l6cXNhc3phb3lpd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMTM0NDYsImV4cCI6MjEwMjc4OTQ0Nn0.jiZe4AfXEsyvVM7x5OhC_01hy8L0JC23Oi13G4di12Y';   // anon public
+const SUPABASE_BUCKET='duvetica-studio';
+const CLOUD_STORES=['lines','refs','models','fabrics','gallery']; // settings는 개인 로컬 유지
+function supaCfg(){return{url:(SUPABASE_URL||state.settings.supaUrl||'').replace(/\/$/,''),key:SUPABASE_ANON_KEY||state.settings.supaKey||'',bucket:SUPABASE_BUCKET||state.settings.supaBucket||'duvetica-studio'};}
+function cloudOn(){const c=supaCfg();return!!(c.url&&c.key);}
+async function supaSelect(table){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${c.key}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
+async function supaUpsert(table,row){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
+async function supaDelete(table,id){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,Prefer:'return=minimal'}});if(!r.ok)throw new Error(`delete ${table} ${r.status}`);}
+async function supaUpload(path,blob){const c=supaCfg();const r=await fetch(`${c.url}/storage/v1/object/${c.bucket}/${path}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':blob.type||'image/png','x-upsert':'true'},body:blob});if(!r.ok)throw new Error(`upload ${r.status} ${await r.text()}`);return `${c.url}/storage/v1/object/public/${c.bucket}/${path}`;}
+async function uploadImages(store,item){
+  const it=Object.assign({},item);
+  const up=async(du,tag)=>{if(!du||!/^data:/.test(du))return du;return await supaUpload(`${store}/${item.id}_${tag}.png`,dataUrlToBlob(du));};
+  if(it.dataUrl)it.dataUrl=await up(it.dataUrl,'img');
+  if(it.logoUrl)it.logoUrl=await up(it.logoUrl,'logo');
+  return it;
+}
+/* 라우팅: 클라우드 켜져 있고 대상 스토어면 Supabase, 아니면 로컬(IndexedDB) */
+async function storeAll(s){if(cloudOn()&&CLOUD_STORES.includes(s)){const rows=await supaSelect(s);rows.forEach(v=>putOf(s,v).catch(()=>{}));return rows;}return allOf(s);}
+async function storePut(s,v){if(cloudOn()&&CLOUD_STORES.includes(s)){const up=await uploadImages(s,v);await supaUpsert(s,{id:up.id,data:up});Object.assign(v,up);putOf(s,up).catch(()=>{});return up;}return putOf(s,v);}
+async function storeDel(s,id){if(cloudOn()&&CLOUD_STORES.includes(s)){await supaDelete(s,id);delOf(s,id).catch(()=>{});return;}return delOf(s,id);}
+async function toBlob(du){if(/^data:/.test(du))return dataUrlToBlob(du);const r=await fetch(du);return await r.blob();}
+
+/* ---------- defaults ---------- */
+const DNA_DEFAULT=`Premium Italian down outerwear house. Lightweight yet dimensional construction; sophisticated nylon surface with a subtle glossy or silky finish. Refined rather than sporty quilting; clean high-density stitching; premium volume control; modern feminine silhouette with controlled waist definition when appropriate. Avoid cheap flat quilting, avoid overly tactical outdoor appearance, avoid generic mass-market proportions. QUILTING RULE: diamond quilting must read clean, symmetrical and softly dimensional with consistent stitch tension and premium loft. LOGO RULE: use a small, refined DUVETICA logo treatment; never oversized or visually dominant.`;
+const BASE_MODEL_DEFAULT=`Beautiful young adult Korean female K-pop idol, unmistakably Korean features: small refined oval face, soft V-line jaw, clear luminous skin, natural glossy hair. Minimal clean white studio background, full-length editorial lookbook lighting, wearing a Duvetica-inspired premium piece.`;
+
+/* ---------- category model ---------- */
+function matDefault(){return{fabric_type:'',surface:'',finish:'',semi_sheer:0.2,shimmer:0.25,shell_ref:false};}
+const CATEGORIES={
+  OUTERWEAR:{noun:'outerwear',
+    subs:['INSULATION JACKET','WINDBREAKER','LIGHT DOWN','LONG DOWN','VEST','COAT','PONCHO'],
+    keepDefault:['model identity','face','hair','pose','background','top','bottoms','footwear'],
+    replaceDefault:['outerwear'],
+    adoptDefault:['silhouette','neckline','collar','quilting'],
+    adoptOpts:['silhouette','neckline','collar','drape/scarf','hood','sleeve','quilting','length','closure','material surface','waist','pockets','trim','drawcord/string','belt','zipper pull','hardware'],
+    schema:'{"silhouette":"","length":"","neckline":"","collar":"","sleeve":"","quilting":{"type":"","scale":"","puffiness":""},"waist":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',length:'',neckline:'',collar:'',sleeve:'',quilting:{type:'',scale:'',puffiness:''},waist:'',pocket:'',material:matDefault()})},
+  BOTTOMS:{noun:'bottoms',
+    subs:['LEGGINGS','WIDE PANTS','STRAIGHT PANTS','SKIRT','SHORTS','JOGGER'],
+    keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
+    replaceDefault:['bottoms'],
+    adoptDefault:['silhouette','leg shape','length'],
+    adoptOpts:['silhouette','rise','leg shape','length','waist','material surface','pockets','drawcord/string','belt','hardware'],
+    schema:'{"silhouette":"","rise":"","leg":"","length":"","waist":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',rise:'',leg:'',length:'',waist:'',pocket:'',material:matDefault()})}
+};
+const KEEP_OPTS=['model identity','face','hair','pose','background','top','outerwear','bottoms','footwear','bag'];
+const REPLACE_OPTS=['outerwear','top','bottoms','footwear'];
+const FABRIC_OPTS=['matte nylon','glossy nylon','silk-touch nylon','taffeta','velvet','wool blend'];
+const SEASONS=['27SS','27FW','28SS','28FW','29SS','29FW'];
+const GENDER_OPTS=['WOMEN','MEN','UNISEX'];
+const GCAT_OPTS=['OUTER','TOP','BOTTOM','DRESS','ACC','SHOES'];
+const GENDER_MAP={women:'WOMEN',w:'WOMEN','여성':'WOMEN','우먼':'WOMEN','여':'WOMEN',men:'MEN',m:'MEN','남성':'MEN','맨':'MEN','남':'MEN',unisex:'UNISEX','공용':'UNISEX','유니섹스':'UNISEX'};
+const GCAT_MAP={
+  outer:'OUTER','아우터':'OUTER','자켓':'OUTER','재킷':'OUTER',jacket:'OUTER',outerwear:'OUTER','코트':'OUTER',coat:'OUTER','패딩':'OUTER','다운':'OUTER','점퍼':'OUTER','블루종':'OUTER','윈드브레이커':'OUTER','바람막이':'OUTER','베스트':'OUTER','조끼':'OUTER',
+  top:'TOP','상의':'TOP','탑':'TOP','맨투맨':'TOP','스웨트':'TOP','스웻':'TOP','스웨터':'TOP','니트':'TOP','풀오버':'TOP','후디':'TOP','후드':'TOP','티셔츠':'TOP','티':'TOP','셔츠':'TOP','블라우스':'TOP','가디건':'TOP','카디건':'TOP',
+  bottom:'BOTTOM','하의':'BOTTOM',pants:'BOTTOM','팬츠':'BOTTOM','바지':'BOTTOM','스커트':'BOTTOM','치마':'BOTTOM',skirt:'BOTTOM','데님':'BOTTOM','진':'BOTTOM','쇼츠':'BOTTOM','반바지':'BOTTOM',
+  dress:'DRESS','원피스':'DRESS','드레스':'DRESS',
+  acc:'ACC','액세서리':'ACC','악세서리':'ACC',bag:'ACC','가방':'ACC','모자':'ACC','머플러':'ACC','스카프':'ACC',
+  shoes:'SHOES','슈즈':'SHOES','신발':'SHOES','운동화':'SHOES'};
+
+/* ---------- state ---------- */
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const state={
+  settings:{id:'main',apiKey:'',model:'gpt-image-2',size:'1024x1536',quality:'high',vision:'gpt-4o-mini',base:'https://api.openai.com/v1',
+            logoDataUrl:'',logoPos:'bc',logoColor:'dark',logoSize:15,logoDefault:true,brandDNA:DNA_DEFAULT,baseModelPrompt:BASE_MODEL_DEFAULT,genCount:2,supaUrl:'',supaKey:'',supaBucket:'duvetica-studio'},
+  lines:[],refs:[],models:[],fabrics:[],gallery:[],
+  pick:{line:null,refs:new Set(),model:null,fabric:null},
+  brief:{keep:new Set(),replace:new Set(),adopt:new Set(),fabricType:''},
+  aiAttrs:{}, jsonDirty:false, galFilter:'all',
+  libFilter:{lines:{gender:'ALL',gcat:'ALL',season:'ALL'},refs:{gender:'ALL',gcat:'ALL',season:'ALL'}}
+};
+
+/* ---------- utils ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2800);}
+function esc(s){return(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fileToDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(f);});}
+function resizeDataUrl(du,max=1024){return new Promise(res=>{const img=new Image();img.onload=()=>{let{width:w,height:h}=img;if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/png'));};img.onerror=()=>res(du);img.src=du;});}
+function dataUrlToBlob(du){const[head,b64]=du.split(',');const mime=(head.match(/:(.*?);/)||[])[1]||'image/png';const bin=atob(b64);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:mime});}
+function prevSeason(s){const m=/^(\d{2})(SS|FW)$/i.exec((s||'').trim());if(!m)return'';return String(+m[1]-1).padStart(2,'0')+m[2].toUpperCase();}
+function download(du,name){const a=document.createElement('a');a.href=du;a.download=name;a.click();}
+
+function sheerText(v){v=+v;return v<12?'completely opaque solid fabric, no transparency':v<38?'subtle sheer accent only at select panels':v<68?'clearly semi-transparent paneling, translucent overlay sections':'strongly sheer see-through fabric, chiffon-like translucent layering';}
+function shimmerText(v){v=+v;return v<12?'a flat matte surface finish, no sheen (this controls surface gloss only, never the color)':v<38?'a soft satin sheen on the fabric surface (gloss only, keep the original color)':v<68?'a glossy lustrous surface sheen, light-reflective finish (surface gloss only — do NOT change the garment color, no silver/metallic tint)':'a high-gloss wet-look lacquered surface sheen (surface shine only — keep the original color, do NOT make it silver or metallic-colored)';}
+function balanceText(b){b=+b;return b<20?'Stay very close to the SOURCE garment: preserve silhouette, length, construction almost exactly. Use references only for subtle colorway and mood, never shape.':b<45?'Keep the SOURCE garment clearly recognizable as the same product family. Let references inform colorway, trims and styling, not the core silhouette.':b<70?'Balance SOURCE design and references evenly: noticeably evolve silhouette and details toward the references while keeping the product family readable.':'Lean strongly on the REFERENCES for silhouette, proportion and detailing. Treat the source garment as a loose starting point within the same category.';}
+function sheerHint(v){v=+v;return v<12?'불투명':v<38?'부분 시스루':v<68?'반투명':'강한 시스루';}
+function shimmerHint(v){v=+v;return v<12?'매트':v<38?'새틴 광':v<68?'글로시':'하이글로스';}
+function balanceHint(b){b=+b;return b<20?'원형 강하게 유지':b<45?'라인 우선':b<70?'균형':'레퍼런스 주도';}
+function adoptClauses(J,noun){
+  const a=J.adopt_from_ref||[],out=[];
+  if(!a.length)return out;
+  out.push(`ADOPT from the reference image(s) for the ${noun}: ${a.join(', ')}. Reconstruct these faithfully from the references — capture their actual shape and proportion, not just a surface hint.`);
+  if(a.includes('silhouette'))out.push(`Rebuild the overall silhouette and structure of the ${noun} to match the reference; do NOT fall back to the base garment's shape.`);
+  if(a.some(x=>['collar','neckline','drape/scarf','hood'].includes(x)))out.push(`If the reference implies a different neckline (scarf wrap, draped shawl collar, funnel, hood), transform the neckline itself and integrate it structurally into the garment — do not merely paste a flat collar onto the base shape.`);
+  if(a.some(x=>['hardware','drawcord/string','belt','zipper pull'].includes(x)))out.push(`Reproduce the DUVETICA branded hardware faithfully from the detail reference image(s): tonal logo webbing drawcords/strings with embossed DUVETICA lettering, a slim waist belt with an engraved metal buckle, and a branded zipper pull. Keep hardware tonal with the shell unless noted, and place it naturally on the garment.`);
+  return out;
+}
+function volumeText(v){v=+v;return v<18?'minimal down fill, slim low-loft silhouette, barely padded':v<42?'light down fill, soft low-to-mid loft, lean profile':v<68?'medium down fill, balanced rounded loft':v<86?'high down fill, plump voluminous loft, pronounced puffiness':'maximum down fill, extremely puffy oversized high-loft volume';}
+function volumeHint(v){v=+v;return v<18?'슬림·경량':v<42?'로우로프트':v<68?'미드로프트':v<86?'하이로프트':'맥시멀 볼륨';}
+
+/* ---------- plan (images + roles) ---------- */
+function computePlan(){
+  const line=state.lines.find(l=>l.id===state.pick.line);
+  const model=state.models.find(m=>m.id===state.pick.model);
+  const refs=state.refs.filter(r=>state.pick.refs.has(r.id));
+  const shell=state.fabrics.find(f=>f.id===state.pick.fabric);
+  const noun=CATEGORIES[$('#cat-parent').value].noun;
+  const sel=($('#model-source')&&$('#model-source').value)||'idol';
+  const modelMode=model?'image':sel; // image | preserve | idol
+  const bal=+($('#balance')?$('#balance').value:35);
+  const images=[],roles=[];
+  const designRole=`${noun} reference — adopt its silhouette, neckline, collar and distinctive design for the ${noun}`;
+  const detailRole=`DETAIL / hardware reference — reproduce ONLY this DUVETICA branded detail (logo drawcord/string, waist belt with engraved buckle, or branded zipper pull) on the garment; do NOT treat it as the overall ${noun} shape`;
+  const roleFor=r=>r.detail?detailRole:designRole;
+  const pushList=arr=>arr.forEach(r=>{images.push(r.dataUrl);roles.push(roleFor(r));});
+  const pushShell=()=>{if(shell){images.push(shell.dataUrl);roles.push('fabric shell swatch — apply this material surface, weave and sheen to the garment shell');}};
+  const designRefs=refs.filter(r=>!r.detail);
+  let refLed=false;
+  if(modelMode==='image'){
+    images.push(model.dataUrl);roles.push('THE MODEL to keep and dress — the output MUST show this exact person (face, hair, skin tone, body), wearing the new garment');
+    if(line){images.push(line.dataUrl);roles.push(`DUVETICA base form — source of the ${noun} design, outfit styling, pose and background (its person is NOT used)`);}
+    pushList(refs);pushShell();
+  }else if(modelMode==='preserve'){
+    if(line){images.push(line.dataUrl);roles.push(`base lookbook — preserve its model, face, hair, pose, background and everything except the ${noun}`);}
+    pushList(refs);pushShell();
+  }else{ // idol
+    refLed=bal>=60&&designRefs.length>0;
+    if(refLed){
+      const primary=designRefs[0];
+      images.push(primary.dataUrl);roles.push(`PRIMARY ${noun} reference — build the garment ON this shape, silhouette and neckline`);
+      if(line){images.push(line.dataUrl);roles.push('DUVETICA base form — brand identity, quilting quality and premium finishing reference only (do NOT copy its silhouette)');}
+      pushList(refs.filter(r=>r!==primary));pushShell();
+    }else{
+      if(line){images.push(line.dataUrl);roles.push(`DUVETICA base form — garment/design & styling source; its model is replaced by the described subject`);}
+      pushList(refs);pushShell();
+    }
+  }
+  return{line,model,refs,shell,images,roles,noun,hasModel:modelMode==='image',modelMode,refLed,balance:bal};
+}
+
+/* ---------- brief → JSON ---------- */
+function deepFill(base,ai){if(!ai)return base;Object.keys(base).forEach(k=>{if(base[k]&&typeof base[k]==='object'&&!Array.isArray(base[k]))deepFill(base[k],ai[k]||{});else if((base[k]===''||base[k]==null)&&ai[k]!=null&&typeof ai[k]!=='object')base[k]=ai[k];});return base;}
+function buildDesignJSON(){
+  const plan=computePlan();
+  const target=$('#season').value, source=prevSeason(target);
+  const parent=$('#cat-parent').value, sub=$('#cat-sub').value, C=CATEGORIES[parent];
+  let g=C.attrs();
+  deepFill(g,state.aiAttrs.garment);
+  g.material.semi_sheer=+$('#sheer').value/100;
+  g.material.shimmer=+$('#shimmer').value/100;
+  g.material.shell_ref=!!plan.shell;
+  if(state.brief.fabricType)g.material.fabric_type=state.brief.fabricType;
+  return{
+    target_season:target, source_season:source,
+    category:{parent,sub,noun:C.noun},
+    keep:[...state.brief.keep], replace:[...state.brief.replace], adopt_from_ref:[...state.brief.adopt],
+    garment:g,
+    design_balance:+$('#balance').value/100,
+    branding:{brand:'DUVETICA',logo:'small refined rectangular chest logo',logo_position:'upper left chest',logo_scale:'subtle'},
+    priority:{model:plan.model?'model reference':'base image',garment_structure:'reference image',brand_rules:'DUVETICA DNA'},
+    notes:$('#extra').value.trim()
+  };
+}
+function currentJSON(){if(state.jsonDirty){try{return JSON.parse($('#designjson').value);}catch(e){}}return buildDesignJSON();}
+function refreshJSON(force){if(state.jsonDirty&&!force){updatePromptPrev();return;}$('#designjson').value=JSON.stringify(buildDesignJSON(),null,2);state.jsonDirty=false;updatePromptPrev();}
+
+/* ---------- JSON → prompt ---------- */
+function garmentParts(cat,g){
+  const parts=[`category ${cat.parent||''} / ${cat.sub||''}`.trim()];
+  const add=(k,lab)=>{if(g[k])parts.push(`${lab||k} ${g[k]}`);};
+  add('silhouette');add('length');
+  if(cat.parent==='OUTERWEAR'){add('neckline');add('collar');add('sleeve');const q=g.quilting||{};const qd=[q.type,q.scale&&q.scale+' scale',q.puffiness&&q.puffiness+' volume'].filter(Boolean).join(', ');if(qd)parts.push('quilting '+qd);}
+  if(cat.parent==='BOTTOMS'){add('rise');add('leg','leg shape');}
+  add('waist');add('pocket','pockets');
+  return parts;
+}
+function jsonToPrompt(J,plan){
+  const S=[],cat=J.category||{},g=J.garment||{},noun=cat.noun||'garment';
+  const rolesText=plan?rolesToText(plan.roles):'';
+  const mode=plan?plan.modelMode:'idol';
+  const dna=state.settings.brandDNA?`[DUVETICA DESIGN DNA] ${state.settings.brandDNA.replace(/\s+/g,' ').trim()}`:'';
+  S.push(`Full-body premium DUVETICA fashion lookbook photograph for the ${J.target_season||'27FW'} season.`);
+  if(dna)S.push(dna);
+  if(mode==='image'){
+    S.push(`Show the EXACT person from image 1 — keep their face, hair, skin tone and body identical — now wearing a newly designed DUVETICA ${noun}. Do not change who the person is; this is a dressing/try-on task.`);
+    S.push(`${noun.toUpperCase()} DESIGN — construct the new ${noun} from image 2 (the DUVETICA base form) together with the reference image(s), balanced per DESIGN BALANCE below.`);
+    adoptClauses(J,noun).forEach(c=>S.push(c));
+    S.push(`STYLING & POSE — follow the outfit styling, pose, framing and background of image 2, but the person is always the model from image 1.`);
+  }else if(mode==='idol'){
+    if(state.settings.baseModelPrompt)S.push(`SUBJECT / MODEL — ${state.settings.baseModelPrompt.trim()}`);
+    if(plan&&plan.refLed)S.push(`${noun.toUpperCase()} DESIGN — build the ${noun} PRIMARILY from the reference image(s) (image 1): take their overall shape, silhouette and neckline. Use the DUVETICA base form only for brand quilting quality and premium finishing, NOT for silhouette.`);
+    else S.push(`${noun.toUpperCase()} DESIGN — construct the new ${noun} from the DUVETICA base form (image 1) together with the reference image(s), balanced per DESIGN BALANCE below. Redesign the ${noun}; keep the DUVETICA look and quality.`);
+    adoptClauses(J,noun).forEach(c=>S.push(c));
+    S.push(`Dress the described model in this ${noun}. Minimal clean white studio background, full-length editorial pose.`);
+  }else{ // preserve
+    const keep=(J.keep||[]);
+    if(keep.length)S.push(`PRESERVE exactly from the base image, do not alter: ${keep.join(', ')}.`);
+    if(J.replace&&J.replace.length)S.push(`REPLACE only: ${J.replace.join(', ')} — redesign the ${noun}, leave everything else untouched.`);
+    adoptClauses(J,noun).forEach(c=>S.push(c));
+  }
+  S.push(`${(cat.parent||'GARMENT')} — ${garmentParts(cat,g).join('; ')}.`);
+  const m=g.material||{},md=[];
+  if(m.fabric_type)md.push(`${m.fabric_type} shell`);
+  if(m.surface)md.push(m.surface);
+  if(m.finish)md.push(m.finish);
+  if(m.shell_ref)md.push('match the surface, weave and sheen of the provided fabric shell swatch');
+  if(m.semi_sheer!=null)md.push(`semi-sheer ${Math.round(m.semi_sheer*100)}% (${sheerText(m.semi_sheer*100)})`);
+  if(m.shimmer!=null)md.push(shimmerText(m.shimmer*100));
+  if(md.length)S.push(`MATERIAL — ${md.join('; ')}.`);
+  if(J.design_balance!=null)S.push(`DESIGN BALANCE — ${balanceText(J.design_balance*100)}`);
+  const b=J.branding||{};
+  S.push(`BRANDING — ${b.logo||'small refined DUVETICA logo'}, ${b.logo_position||'upper left chest'}, ${b.logo_scale||'subtle'}; render only a small subtle brand tab, do NOT render large or legible logo text.`);
+  if(J.notes)S.push(`ADDITIONAL — ${J.notes}.`);
+  if(rolesText)S.push(`IMAGE ROLES — ${rolesText}.`);
+  S.push('Clean studio lighting, neutral seamless background, photorealistic, editorial luxury quality, sharp premium detail.');
+  return S.join(' ');
+}
+function rolesToText(roles){return roles.map((r,i)=>`image ${i+1}: ${r}`).join('. ');}
+function updatePromptPrev(){const plan=computePlan();$('#promptprev').textContent=jsonToPrompt(currentJSON(),plan);$('#btn-gen').disabled=!state.pick.line;}
+
+/* ---------- OpenAI ---------- */
+async function openaiEdit(prompt,imgs,n){
+  const st=state.settings;if(!st.apiKey)throw new Error('설정에서 API 키를 먼저 입력하세요.');
+  const fd=new FormData();fd.append('model',st.model||'gpt-image-2');fd.append('prompt',prompt);
+  if(st.size&&st.size!=='auto')fd.append('size',st.size);
+  if(st.quality&&st.quality!=='auto')fd.append('quality',st.quality);
+  fd.append('n',String(Math.max(1,Math.min(10,n||1))));
+  for(let i=0;i<imgs.length;i++){fd.append('image[]',await toBlob(imgs[i]),`img_${i}.png`);}
+  const r=await fetch(`${st.base.replace(/\/$/,'')}/images/edits`,{method:'POST',headers:{'Authorization':`Bearer ${st.apiKey}`},body:fd});
+  if(!r.ok){let m=`HTTP ${r.status}`;try{const j=await r.json();m=j.error?.message||m;}catch(e){}throw new Error(m);}
+  const j=await r.json();const arr=(j.data||[]).map(d=>d.b64_json).filter(Boolean);if(!arr.length)throw new Error('응답에 이미지가 없습니다.');
+  return arr.map(b=>'data:image/png;base64,'+b);
+}
+async function openaiVision(messages){
+  const st=state.settings;if(!st.apiKey)throw new Error('API 키를 먼저 입력하세요.');
+  const r=await fetch(`${st.base.replace(/\/$/,'')}/chat/completions`,{method:'POST',headers:{'Authorization':`Bearer ${st.apiKey}`,'Content-Type':'application/json'},body:JSON.stringify({model:st.vision||'gpt-4o-mini',messages})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error?.message||('HTTP '+r.status));
+  return j.choices?.[0]?.message?.content||'';
+}
+async function analyzeRefs(){
+  const plan=computePlan();if(!plan.refs.length){toast('레퍼런스를 먼저 선택하세요.');return;}
+  const C=CATEGORIES[$('#cat-parent').value];
+  const btn=$('#btn-analyze');btn.disabled=true;btn.textContent='분석 중…';
+  try{
+    const content=[{type:'text',text:`아래 레퍼런스 ${C.noun} 이미지를 읽고 디자인 속성을 JSON으로만 출력해줘. 설명·마크다운·코드펜스 없이 순수 JSON 객체 하나만. 스키마: ${C.schema}. 확실치 않은 값은 빈 문자열로.`}];
+    plan.refs.forEach(r=>content.push({type:'image_url',image_url:{url:r.dataUrl}}));
+    let txt=await openaiVision([{role:'user',content}]);
+    txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const obj=JSON.parse(txt.slice(txt.indexOf('{'),txt.lastIndexOf('}')+1));
+    state.aiAttrs.garment=obj;state.jsonDirty=false;refreshJSON(true);toast('레퍼런스 분석 완료 · JSON 반영');
+  }catch(e){toast('분석 실패: '+e.message);}finally{btn.disabled=false;btn.textContent='AI 분석';}
+}
+
+/* ---------- generate ---------- */
+async function doGenerate(){
+  if(!state.pick.line){toast('베이스 라인을 선택하세요.');return;}
+  const plan=computePlan(),J=currentJSON(),prompt=jsonToPrompt(J,plan);
+  const n=Math.max(1,Math.min(4,+($('#gen-n').value||state.settings.genCount||2)));
+  const pv=$('#gen-preview');pv.classList.remove('multi');pv.innerHTML=`<div class="load"><div class="spinner"></div><span>생성 중… ${n}장</span></div>`;$('#btn-gen').disabled=true;
+  try{
+    const raws=await openaiEdit(prompt,plan.images,n);const items=[];
+    for(let i=0;i<raws.length;i++){
+      const raw=raws[i];const logoUrl=state.settings.logoDefault?await applyLogo(raw):raw;
+      const g={id:uid(),name:`${plan.line.name} · ${J.target_season} ${J.category.parent}${raws.length>1?' #'+(i+1):''}`,season:J.target_season,
+        dataUrl:raw,logoUrl,sourceLineId:plan.line.id,refIds:plan.refs.map(r=>r.id),modelId:plan.model?plan.model.id:null,fabricId:plan.shell?plan.shell.id:null,
+        category:J.category,keep:J.keep,replace:J.replace,adopt:J.adopt_from_ref,
+        sheer:+$('#sheer').value,shimmer:+$('#shimmer').value,balance:+$('#balance').value,
+        designJSON:J,prompt,extra:J.notes,parentId:null,createdAt:Date.now()+i};
+      state.gallery.push(g);await storePut('gallery',g);items.push(g);
+    }
+    if(items.length>1){pv.classList.add('multi');pv.innerHTML=items.map(g=>`<img src="${g.logoUrl}">`).join('');}
+    else{pv.classList.remove('multi');pv.innerHTML=`<img src="${items[0].logoUrl}">`;}
+    toast(`${items.length}장 생성 · 갤러리 저장`);galleryGrid();compareSelect();
+  }catch(e){pv.classList.remove('multi');pv.innerHTML=`<div class="ph" style="color:var(--alert)">생성 실패<br><span style="font-size:11px">${esc(e.message)}</span></div>`;toast('생성 실패: '+e.message);}
+  finally{$('#btn-gen').disabled=false;}
+}
+function applyLogo(du){return new Promise(res=>{
+  const st=state.settings,base=new Image();
+  base.onload=()=>{
+    const c=document.createElement('canvas');c.width=base.width;c.height=base.height;const ctx=c.getContext('2d');ctx.drawImage(base,0,0);
+    const W=c.width,H=c.height,pad=Math.round(W*0.045);
+    const place=(w,h)=>{const p=st.logoPos;return p==='bl'?[pad,H-h-pad]:p==='br'?[W-w-pad,H-h-pad]:p==='tl'?[pad,pad]:[(W-w)/2,H-h-pad];};
+    const done=()=>res(c.toDataURL('image/png'));
+    if(st.logoDataUrl){const lg=new Image();lg.onload=()=>{const w=Math.round(W*(st.logoSize/100));const h=Math.round(w*(lg.height/lg.width));const[x,y]=place(w,h);ctx.globalAlpha=.95;ctx.drawImage(lg,x,y,w,h);ctx.globalAlpha=1;done();};lg.onerror=done;lg.src=st.logoDataUrl;}
+    else{const fs=Math.round(W*(st.logoSize/100)*0.34);ctx.font=`400 ${fs}px Georgia,'Times New Roman',serif`;ctx.textBaseline='alphabetic';const txt='DUVETICA',ls=fs*0.34;const ws=[...txt].map(ch=>ctx.measureText(ch).width+ls);const tw=ws.reduce((a,b)=>a+b,0)-ls;const[x,y]=place(tw,fs);ctx.fillStyle=st.logoColor==='light'?'rgba(255,255,255,.95)':'rgba(20,19,12,.9)';ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=W*0.006;let cx=x;for(let i=0;i<txt.length;i++){ctx.fillText(txt[i],cx,y+fs);cx+=ws[i];}ctx.shadowBlur=0;done();}
+  };base.onerror=()=>res(du);base.src=du;
+});}
+
+/* ---------- library render ---------- */
+function metaLine(store,it){
+  const cls=[it.gender,it.gcat,it.season].filter(Boolean).join(' · ');
+  if(store==='lines')return[cls,it.category,it.lifestyle].filter(Boolean).join(' · ')||'라인';
+  if(store==='refs')return((it.detail?'[디테일] ':'')+([cls,((it.tags&&it.tags.length)?it.tags.join(', '):'')].filter(Boolean).join(' · ')||'레퍼런스'));
+  if(store==='fabrics')return it.ftype||'원단';
+  return '기본모델';
+}
+function libGrid(store){
+  const grid=$('#grid-'+store),sw=store==='fabrics'?'sw':'';
+  let items=state[store].slice().sort((a,b)=>b.createdAt-a.createdAt); // 최신순
+  const filtered=store==='lines'||store==='refs';
+  if(filtered){renderLibChips(store);items=items.filter(it=>matchFilter(store,it));}
+  if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">${filtered&&hasActiveFilter(store)?'해당 조건의 항목이 없습니다.':'아직 없습니다. 위에서 올려주세요.'}</div>`;return;}
+  grid.innerHTML=items.map(it=>`<div class="card ${sw}" data-id="${it.id}" data-store="${store}"><button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`).join('');
+}
+function matchFilter(store,it){const f=state.libFilter[store];if(!f)return true;return(f.gender==='ALL'||it.gender===f.gender)&&(f.gcat==='ALL'||it.gcat===f.gcat)&&(f.season==='ALL'||it.season===f.season);}
+function hasActiveFilter(store){const f=state.libFilter[store];return f&&(f.gender!=='ALL'||f.gcat!=='ALL'||f.season!=='ALL');}
+function chipGroup(store,axis,label,opts,current){
+  return `<div class="chipgroup"><span class="chiplabel">${label}</span>`+[['ALL','전체'],...opts.map(o=>[o,o])].map(([v,l])=>`<button class="togglepill ${current===v?'on':''}" data-libstore="${store}" data-axis="${axis}" data-val="${v}">${esc(l)}</button>`).join('')+`</div>`;
+}
+function renderLibChips(store){
+  const el=$('#lib-'+store+'-chips');if(!el)return;
+  const f=state.libFilter[store];
+  const seasons=[...new Set(state[store].map(x=>x.season).filter(Boolean))].sort();
+  el.innerHTML=chipGroup(store,'gender','성별',GENDER_OPTS,f.gender)+chipGroup(store,'gcat','카테고리',GCAT_OPTS,f.gcat)+chipGroup(store,'season','시즌',seasons,f.season);
+}
+function refreshCounts(){['lines','refs','models','fabrics'].forEach(s=>$('#c-'+s).textContent=state[s].length);}
+
+/* ---------- generate picks (bars + inline) ---------- */
+function renderPickBar(store){
+  const bar=$('#pick-'+store);
+  const sel=store==='lines'?(state.pick.line?[state.lines.find(l=>l.id===state.pick.line)].filter(Boolean):[]):state.refs.filter(r=>state.pick.refs.has(r.id));
+  bar.innerHTML=sel.map(it=>`<div class="thumbchip"><img src="${it.dataUrl}"><span>${esc(it.name)}</span><button data-unpick="${store}" data-uid="${it.id}">✕</button></div>`).join('')
+    +`<button class="btn sm addarch" data-arch="${store}">＋ 아카이브에서 셀렉</button>`;
+}
+function pickGrid(store){
+  const el=$('#pick-'+store),items=state[store],sw=store==='fabrics'?'sw':'';
+  if(!items.length){el.innerHTML=`<div class="empty" style="grid-column:1/-1;padding:16px">라이브러리에서 먼저 올려주세요.</div>`;return;}
+  el.innerHTML=items.map(it=>{const on=store==='models'?state.pick.model===it.id:state.pick.fabric===it.id;
+    return`<div class="card ${sw} ${on?'sel':''}" data-pick="${store}" data-id="${it.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`;}).join('');
+}
+function renderPicks(){
+  const src=prevSeason($('#season').value);
+  $('#prevlabel').textContent=src?`${src} 라인`:'시즌 확인';
+  renderPickBar('lines');renderPickBar('refs');pickGrid('models');pickGrid('fabrics');
+  refreshJSON();
+}
+
+/* ---------- ARCHIVE BROWSER ---------- */
+function openArchive(store){
+  const isLines=store==='lines',multi=store==='refs';
+  let q='',genderF='ALL',gcatF='ALL',tagF='ALL',seasonF=isLines?(prevSeason($('#season').value)||'ALL'):'ALL';
+  $('#sheet').classList.add('wide');
+  $('#m-title').textContent=isLines?'라인 아카이브':'레퍼런스 아카이브';
+  $('#m-body').innerHTML=`
+    <div class="arch-tools">
+      <input id="arch-q" class="arch-search" placeholder="${isLines?'라인명·시즌·카테고리 검색':'레퍼런스명·태그 검색'}">
+      <span id="arch-count" class="arch-count"></span>
+      <div style="flex:1"></div>
+      <button class="btn sm primary" id="arch-done">선택 완료</button>
+    </div>
+    <div class="arch-chips" id="arch-chips"></div>
+    <div class="arch-grid" id="arch-grid"></div>`;
+  const chipsEl=$('#arch-chips'),gridEl=$('#arch-grid'),countEl=$('#arch-count');
+  const grp=(axis,label,opts,cur)=>`<div class="chipgroup"><span class="chiplabel">${label}</span>`+[['ALL','전체'],...opts.map(o=>[o,o])].map(([v,l])=>`<button class="togglepill ${cur===v?'on':''}" data-axis="${axis}" data-val="${esc(v)}">${esc(l)}</button>`).join('')+`</div>`;
+  function chips(){
+    const seasons=[...new Set(state[store].map(x=>x.season).filter(Boolean))].sort();
+    let h=grp('gender','성별',GENDER_OPTS,genderF)+grp('gcat','카테고리',GCAT_OPTS,gcatF)+grp('season','시즌',seasons,seasonF);
+    if(!isLines){const tags=[...new Set(state.refs.flatMap(r=>r.tags||[]))].sort();if(tags.length)h+=grp('tag','태그',tags,tagF);}
+    chipsEl.innerHTML=h;
+  }
+  function list(){
+    let items=state[store].slice().sort((a,b)=>b.createdAt-a.createdAt);
+    if(genderF!=='ALL')items=items.filter(x=>x.gender===genderF);
+    if(gcatF!=='ALL')items=items.filter(x=>x.gcat===gcatF);
+    if(seasonF!=='ALL')items=items.filter(x=>x.season===seasonF);
+    if(!isLines&&tagF!=='ALL')items=items.filter(r=>(r.tags||[]).includes(tagF));
+    if(q){const s=q.toLowerCase();items=items.filter(it=>((it.name||'')+' '+((it.tags||[]).join(' '))+' '+(it.season||'')+' '+(it.gender||'')+' '+(it.gcat||'')+' '+(it.category||'')+' '+(it.lifestyle||'')).toLowerCase().includes(s));}
+    return items;
+  }
+  function render(){
+    const items=list();
+    countEl.textContent=`${items.length} items`;
+    if(!items.length){gridEl.innerHTML=`<div class="empty" style="grid-column:1/-1">조건에 맞는 항목이 없습니다.</div>`;return;}
+    gridEl.innerHTML=items.map(it=>{
+      const on=isLines?state.pick.line===it.id:state.pick.refs.has(it.id);
+      return`<div class="acard ${on?'sel':''}" data-aid="${it.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="br">DUVETICA${it.season?' · '+esc(it.season):''}</div><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`;
+    }).join('');
+  }
+  chips();render();
+  $('#arch-q').addEventListener('input',e=>{q=e.target.value;render();});
+  chipsEl.addEventListener('click',e=>{const b=e.target.closest('[data-axis]');if(!b)return;const v=b.dataset.val,ax=b.dataset.axis;if(ax==='gender')genderF=v;else if(ax==='gcat')gcatF=v;else if(ax==='season')seasonF=v;else if(ax==='tag')tagF=v;chips();render();});
+  gridEl.addEventListener('click',e=>{
+    const c=e.target.closest('[data-aid]');if(!c)return;const id=c.dataset.aid;
+    if(isLines)state.pick.line=state.pick.line===id?null:id;
+    else{state.pick.refs.has(id)?state.pick.refs.delete(id):state.pick.refs.add(id);}
+    render();renderPickBar(store);refreshJSON();
+  });
+  $('#arch-done').addEventListener('click',closeModal);
+  $('#modal').classList.add('on');
+}
+function closeModal(){$('#modal').classList.remove('on');$('#sheet').classList.remove('wide');renderPicks();}
+
+/* ---------- pills ---------- */
+function renderPills(){
+  const parent=$('#cat-parent').value,adoptOpts=CATEGORIES[parent].adoptOpts;
+  const mk=(opts,set,cls)=>opts.map(o=>`<button class="togglepill ${cls} ${set.has(o)?'on':''}" data-pill="${cls}" data-val="${o}">${o}</button>`).join('');
+  $('#keep-pills').innerHTML=mk(KEEP_OPTS,state.brief.keep,'keep');
+  $('#replace-pills').innerHTML=mk(REPLACE_OPTS,state.brief.replace,'rep');
+  $('#adopt-pills').innerHTML=mk(adoptOpts,state.brief.adopt,'adopt');
+  $('#fabric-pills').innerHTML=FABRIC_OPTS.map(o=>`<button class="togglepill ${state.brief.fabricType===o?'on':''}" data-fabpill="${o}">${o}</button>`).join('');
+}
+function applyCategory(reset){
+  const parent=$('#cat-parent').value,C=CATEGORIES[parent];
+  $('#cat-sub').innerHTML=C.subs.map(s=>`<option>${s}</option>`).join('');
+  $('#cat-tag').textContent=`· ${C.noun} 기준`;
+
+  if(reset){state.brief.keep=new Set(C.keepDefault);state.brief.replace=new Set(C.replaceDefault);state.brief.adopt=new Set(C.adoptDefault);state.aiAttrs={};}
+  renderPills();refreshJSON(true);
+}
+
+/* ---------- gallery ---------- */
+function galleryGrid(){
+  const grid=$('#grid-gallery');let items=state.gallery.slice().sort((a,b)=>b.createdAt-a.createdAt);
+  if(state.galFilter!=='all')items=items.filter(g=>g.season===state.galFilter);
+  const seasons=[...new Set(state.gallery.map(g=>g.season))];
+  $('#gal-filter').innerHTML=['all',...seasons].map(s=>`<button class="togglepill ${state.galFilter===s?'on':''}" data-filter="${s}">${s==='all'?'전체':esc(s)}</button>`).join('');
+  if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">아직 생성물이 없습니다. 생성 탭에서 만들어보세요.</div>`;return;}
+  const showLogo=$('#showlogo').checked;
+  grid.innerHTML=items.map(g=>`<div class="card" data-gid="${g.id}"><button class="x" data-galdel="${g.id}">✕</button><span class="thumb" style="background-image:url('${showLogo&&g.logoUrl?g.logoUrl:g.dataUrl}')"></span><div class="meta"><div class="nm">${esc(g.name)}</div><div class="tg">${esc(g.season)}${g.category?' · '+esc(g.category.parent):''} · S${g.sheer}/Sh${g.shimmer}${g.parentId?' · edit':''}</div></div></div>`).join('');
+}
+
+/* ---------- compare ---------- */
+function compareSelect(){const sel=$('#cmp-select');const items=state.gallery.filter(g=>g.sourceLineId).sort((a,b)=>b.createdAt-a.createdAt);sel.innerHTML=`<option value="">— 선택 —</option>`+items.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');}
+function renderCompare(gid){
+  const box=$('#cmp-body');if(!gid){box.innerHTML='';return;}
+  const g=state.gallery.find(x=>x.id===gid),line=state.lines.find(l=>l.id===g.sourceLineId);
+  const refNames=(g.refIds||[]).map(id=>{const r=state.refs.find(x=>x.id===id);return r?r.name:'(삭제됨)';});
+  const cat=g.category?`${g.category.parent} / ${g.category.sub}`:'—';
+  box.innerHTML=`
+    <div class="cmp">
+      <div><div class="caphead"><span class="t">${line?esc(line.name):'원본 없음'}</span><span class="s">${line?esc(line.season):''} · Source</span></div>
+        <div class="frame">${line?`<img src="${line.dataUrl}">`:'<div class="empty" style="height:100%">원본 라인이 삭제됨</div>'}</div></div>
+      <div><div class="caphead"><span class="t">${esc(g.name)}</span><span class="s">${esc(g.season)} · Generated</span></div>
+        <div class="frame"><img src="${g.logoUrl||g.dataUrl}"></div></div>
+    </div>
+    <table class="difftable">
+      <tr><td>시즌</td><td>${line?esc(line.season)+' → ':''}<b>${esc(g.season)}</b></td></tr>
+      <tr><td>카테고리</td><td>${esc(cat)}</td></tr>
+      <tr><td>유지 KEEP</td><td>${(g.keep||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join('')||'—'}</td></tr>
+      <tr><td>교체 REPLACE</td><td>${(g.replace||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join('')||'—'}</td></tr>
+      <tr><td>채용 ADOPT</td><td>${(g.adopt||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join('')||'—'}</td></tr>
+      <tr><td>소재</td><td>Sheer ${g.sheer} · Shimmer ${g.shimmer} <span style="color:var(--ink-45)">(${sheerHint(g.sheer)}/${shimmerHint(g.shimmer)})</span></td></tr>
+      <tr><td>디자인 밸런스</td><td>${g.balance!=null?g.balance:35}/100 <span style="color:var(--ink-45)">(${balanceHint(g.balance!=null?g.balance:35)})</span></td></tr>
+      <tr><td>레퍼런스</td><td>${refNames.length?refNames.map(n=>`<span class="chip">${esc(n)}</span>`).join(''):'—'}</td></tr>
+    </table>
+    <div class="row" style="margin-top:14px"><button class="btn sm" id="cmp-ai">AI 차이 설명 생성</button><button class="btn sm ghost" id="cmp-json">분석 JSON 보기</button></div>
+    <div id="cmp-ai-out" style="margin-top:10px"></div><div id="cmp-json-out" style="margin-top:10px"></div>`;
+  $('#cmp-ai').onclick=()=>aiDiff(g,line);
+  $('#cmp-json').onclick=()=>{const o=$('#cmp-json-out');o.innerHTML=o.innerHTML?'':`<div class="promptbox" style="max-height:280px;font-family:var(--mono);color:var(--ink)">${esc(JSON.stringify(g.designJSON||{},null,2))}</div>`;};
+}
+async function aiDiff(g,line){
+  if(!line){toast('원본 라인이 없어 비교 불가.');return;}
+  const out=$('#cmp-ai-out');out.innerHTML=`<div class="row"><div class="spinner"></div><span class="hint">분석 중…</span></div>`;
+  try{const txt=await openaiVision([{role:'user',content:[{type:'text',text:'두 패션 이미지를 비교해줘. 첫 번째는 원본 라인, 두 번째는 생성물. 실루엣/기장/디테일/소재감/컬러/스타일링이 어떻게 달라졌는지 한국어 불릿 5개 이내로 간결하게.'},{type:'image_url',image_url:{url:line.dataUrl}},{type:'image_url',image_url:{url:g.dataUrl}}]}]);out.innerHTML=`<div class="promptbox" style="max-height:none;color:var(--ink)">${esc(txt)}</div>`;}
+  catch(e){out.innerHTML=`<div class="hint" style="color:var(--alert)">실패: ${esc(e.message)}</div>`;}
+}
+
+/* ---------- gallery edit ---------- */
+let editG=null,editShown=null;
+function openEdit(gid){
+  editG=state.gallery.find(g=>g.id===gid);editShown=editG.id;
+  $('#m-title').textContent='갤러리 수정 · '+editG.name;
+  $('#m-body').innerHTML=`
+    <div class="editgrid">
+      <div><div class="preview" id="edit-prev"><img src="${editG.logoUrl||editG.dataUrl}"></div>
+        <div class="miniver" id="edit-vers"></div>
+        <button class="btn sm" style="margin-top:12px;width:100%;justify-content:center" id="edit-dl">이 이미지 다운로드</button></div>
+      <div>
+        <div class="sectlabel" style="margin-top:0">모델 변경</div><div class="hint">같은 옷을 다른 모델/포즈로.</div>
+        <div id="edit-models" class="cards" style="grid-template-columns:repeat(auto-fill,minmax(80px,1fr))"></div>
+        <button class="btn sm" id="edit-model-go" style="margin-top:8px">선택 모델로 재생성</button>
+        <div class="sectlabel">코디 변경</div><input id="edit-cody" class="inp" placeholder="예: 와이드 데님 + 니하이 부츠 + 레더 토트">
+        <button class="btn sm" id="edit-cody-go" style="margin-top:8px">코디 변경 생성</button>
+        <div class="sectlabel">마감 재조절</div>
+        <div class="slider-wrap" style="margin-top:6px"><div class="slider-head"><span class="lab">Sheer</span><span class="val" id="e-sheer-v">${editG.sheer}</span></div><input type="range" id="e-sheer" min="0" max="100" value="${editG.sheer}"></div>
+        <div class="slider-wrap"><div class="slider-head"><span class="lab">Shimmer 광택</span><span class="val" id="e-shimmer-v">${editG.shimmer}</span></div><input type="range" id="e-shimmer" min="0" max="100" value="${editG.shimmer}"></div>
+        <div class="slider-wrap"><div class="slider-head"><span class="lab">볼륨 · 충전재</span><span class="val" id="e-volume-v">${editG.volume!=null?editG.volume:50}</span></div><input type="range" id="e-volume" min="0" max="100" value="${editG.volume!=null?editG.volume:50}"><div class="slider-hint" id="e-volume-h"></div></div>
+        <button class="btn sm" id="edit-finish-go" style="margin-top:8px">마감 재적용</button>
+      </div></div>`;
+  $('#edit-models').innerHTML=state.models.length?state.models.map(m=>`<div class="card" data-emodel="${m.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${m.dataUrl}')"></span></div>`).join(''):'<div class="hint">기본모델을 먼저 올려주세요.</div>';
+  let chosenModel=null;
+  $$('#edit-models .card').forEach(c=>c.onclick=()=>{$$('#edit-models .card').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');chosenModel=c.dataset.emodel;});
+  renderVersions();
+  $('#e-sheer').oninput=e=>$('#e-sheer-v').textContent=e.target.value;
+  $('#e-shimmer').oninput=e=>$('#e-shimmer-v').textContent=e.target.value;
+  $('#e-volume').oninput=e=>{$('#e-volume-v').textContent=e.target.value;$('#e-volume-h').textContent=volumeHint(e.target.value);};
+  $('#e-volume-h').textContent=volumeHint($('#e-volume').value);
+  $('#edit-model-go').onclick=()=>{if(!chosenModel){toast('모델을 선택하세요.');return;}runEdit('model',{modelId:chosenModel});};
+  $('#edit-cody-go').onclick=()=>{const t=$('#edit-cody').value.trim();if(!t){toast('코디 내용을 입력하세요.');return;}runEdit('cody',{text:t});};
+  $('#edit-finish-go').onclick=()=>runEdit('finish',{sheer:+$('#e-sheer').value,shimmer:+$('#e-shimmer').value,volume:+$('#e-volume').value});
+  $('#edit-dl').onclick=()=>{const cur=state.gallery.find(g=>g.id===editShown);download(cur.logoUrl||cur.dataUrl,cur.name+'.png');};
+  $('#modal').classList.add('on');
+}
+function editVersions(){const root=editG.parentId||editG.id;return state.gallery.filter(g=>g.id===root||g.parentId===root);}
+function renderVersions(){const el=$('#edit-vers');el.innerHTML=editVersions().sort((a,b)=>a.createdAt-b.createdAt).map(v=>`<img data-ver="${v.id}" class="${v.id===editShown?'on':''}" src="${v.logoUrl||v.dataUrl}">`).join('');
+  $$('#edit-vers img').forEach(im=>im.onclick=()=>{editShown=im.dataset.ver;const v=state.gallery.find(g=>g.id===editShown);$('#edit-prev').innerHTML=`<img src="${v.logoUrl||v.dataUrl}">`;$$('#edit-vers img').forEach(x=>x.classList.toggle('on',x.dataset.ver===editShown));});}
+async function runEdit(kind,opt){
+  const cur=state.gallery.find(g=>g.id===editShown)||editG;let prompt,imgs=[cur.dataUrl];
+  if(kind==='model'){const m=state.models.find(x=>x.id===opt.modelId);imgs.push(m.dataUrl);prompt='Keep the garment in the first image EXACTLY the same (identical design, color, construction). The output MUST depict the exact person from the SECOND image — their face, hair, skin tone and body — replacing the first image model entirely. Only the pose may follow the first image. Clean studio lighting, neutral background. Do not render legible logo text.';}
+  else if(kind==='cody')prompt=`Keep the DUVETICA main garment identical. Restyle only the coordinating items — the other clothing, footwear and accessories — to: ${opt.text}. Keep the same model and framing. Do not render legible logo text.`;
+  else prompt=`Keep the garment design, silhouette and model identical. Re-render only the surface finish and padding — fabric sheer: ${sheerText(opt.sheer)}; surface: ${shimmerText(opt.shimmer)}; down fill volume: ${volumeText(opt.volume)}. Keep the original color. Do not render legible logo text.`;
+  const prev=$('#edit-prev');prev.innerHTML=`<div class="load"><div class="spinner"></div><span>수정 중…</span></div>`;
+  try{
+    const raw=await openaiEdit(prompt,imgs);const logoUrl=state.settings.logoDefault?await applyLogo(raw):raw;const root=editG.parentId||editG.id;
+    const ng={id:uid(),name:cur.name+' ·'+(kind==='model'?'M':kind==='cody'?'C':'F'),season:cur.season,dataUrl:raw,logoUrl,
+      sourceLineId:cur.sourceLineId,refIds:cur.refIds,modelId:kind==='model'?opt.modelId:cur.modelId,fabricId:cur.fabricId,
+      category:cur.category,keep:cur.keep,replace:cur.replace,adopt:cur.adopt,
+      sheer:kind==='finish'?opt.sheer:cur.sheer,shimmer:kind==='finish'?opt.shimmer:cur.shimmer,volume:kind==='finish'?opt.volume:cur.volume,balance:cur.balance,
+      designJSON:cur.designJSON,prompt,extra:cur.extra,parentId:root,createdAt:Date.now()};
+    state.gallery.push(ng);await storePut('gallery',ng);editShown=ng.id;prev.innerHTML=`<img src="${logoUrl}">`;renderVersions();galleryGrid();compareSelect();toast('수정본 생성됨');
+  }catch(e){prev.innerHTML=`<img src="${cur.logoUrl||cur.dataUrl}">`;toast('수정 실패: '+e.message);}
+}
+
+/* ---------- meta editor ---------- */
+function openMeta(store,id){
+  const it=state[store].find(x=>x.id===id);
+  $('#m-title').textContent='정보 편집 · '+it.name;
+  let f=`<label class="fld">이름</label><input id="me-name" class="inp" value="${esc(it.name)}">`;
+  const clsFields=`<div class="row" style="margin-top:12px">
+    <div style="flex:1"><label class="fld">성별</label><select id="me-gender" class="inp"><option value=""></option>${GENDER_OPTS.map(x=>`<option ${it.gender===x?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div style="flex:1"><label class="fld">카테고리</label><select id="me-gcat" class="inp"><option value=""></option>${GCAT_OPTS.map(x=>`<option ${it.gcat===x?'selected':''}>${x}</option>`).join('')}</select></div>
+    <div style="flex:1"><label class="fld">시즌</label><select id="me-season" class="inp"><option value=""></option>${SEASONS.map(s=>`<option ${it.season===s?'selected':''}>${s}</option>`).join('')}</select></div></div>`;
+  if(store==='lines')f+=clsFields+`<div class="row" style="margin-top:12px"><div style="flex:1"><label class="fld">세부(자유)</label><input id="me-cat" class="inp" value="${esc(it.category||'')}" placeholder="경량/Short/Long"></div><div style="flex:1"><label class="fld">라이프스타일</label><select id="me-life" class="inp"><option value=""></option>${['URBAN','ACTIVE WELLNESS','APRES-SKI'].map(x=>`<option ${it.lifestyle===x?'selected':''}>${x}</option>`).join('')}</select></div></div>`;
+  if(store==='refs')f+=clsFields+`<label class="fld" style="margin-top:12px">태그 (쉼표)</label><input id="me-tags" class="inp" value="${esc((it.tags||[]).join(', '))}" placeholder="숄카라, 다이아퀼팅, 와이드…"><label class="row" style="font-size:12px;color:var(--ink-70);gap:6px;margin-top:12px"><input type="checkbox" id="me-detail" ${it.detail?'checked':''}> 디테일(하드웨어) 레퍼런스 — 벨트·스트링·지퍼풀러 등, 전체 실루엣이 아니라 이 디테일만 채용</label>`;
+  if(store==='fabrics')f+=`<label class="fld" style="margin-top:12px">원단 타입</label><input id="me-ftype" class="inp" value="${esc(it.ftype||'')}" placeholder="glossy nylon / taffeta…">`;
+  $('#m-body').innerHTML=`<div class="editgrid"><div><div class="preview"><img src="${it.dataUrl}"></div></div><div>${f}<button class="btn primary sm" id="me-save" style="margin-top:16px">저장</button></div></div>`;
+  $('#me-save').onclick=async()=>{it.name=$('#me-name').value.trim()||it.name;if(store==='lines'||store==='refs'){it.gender=$('#me-gender').value;it.gcat=$('#me-gcat').value;it.season=$('#me-season').value;}if(store==='lines'){it.category=$('#me-cat').value.trim();it.lifestyle=$('#me-life').value;}if(store==='refs'){it.tags=$('#me-tags').value.split(',').map(s=>s.trim()).filter(Boolean);it.detail=$('#me-detail').checked;}if(store==='fabrics')it.ftype=$('#me-ftype').value.trim();await storePut(store,it);libGrid(store);renderPicks();$('#modal').classList.remove('on');toast('저장됨');};
+  $('#modal').classList.add('on');
+}
+
+/* ---------- upload ---------- */
+let uploadStore=null;
+/* 파일명 규칙: 시즌_카테고리_아이템명(.확장자) → 세 필드 자동 인식 */
+function normSeason(tok){
+  const m=/^(\d{2})\s*(ss|s|fw|f|w)$/i.exec((tok||'').trim());
+  if(!m)return'';
+  const h=m[2].toLowerCase();
+  return m[1]+((h==='ss'||h==='s')?'SS':'FW');
+}
+function parseName(fn){
+  const base=fn.replace(/\.[^.]+$/,'');
+  const parts=base.split('_').map(s=>s.trim()).filter(Boolean);
+  let gender='',gcat='',season='',nameParts=[],matched=false;
+  for(const p of parts){
+    const lp=p.toLowerCase();
+    if(!gender&&GENDER_MAP[lp]){gender=GENDER_MAP[lp];matched=true;continue;}
+    if(!gcat&&GCAT_MAP[lp]){gcat=GCAT_MAP[lp];matched=true;continue;}
+    if(!season){const ns=normSeason(p);if(ns){season=ns;matched=true;continue;}}
+    nameParts.push(p);
+  }
+  return{gender,gcat,season,name:nameParts.join('_')||base,ok:matched};
+}
+async function handleFiles(files,store){
+  if(store==='__logo'){let du=await fileToDataUrl(files[0]);du=await resizeDataUrl(du,600);state.settings.logoDataUrl=du;await putOf('settings',state.settings);renderLogoPrev();toast('로고 저장됨');return;}
+  const arr=[...files].filter(f=>f.type.startsWith('image/'));let parsed=0;
+  for(const f of arr){let du=await fileToDataUrl(f);du=await resizeDataUrl(du,1024);
+    const m=parseName(f.name);if(m.ok)parsed++;
+    const it={id:uid(),name:m.name,dataUrl:du,gender:m.gender||'',gcat:m.gcat||'',season:m.season||'',createdAt:Date.now()};
+    if(store==='lines'){it.category='';it.lifestyle='';}
+    if(store==='refs'){it.tags=[];}
+    if(store==='fabrics')it.ftype='';
+    state[store].push(it);await storePut(store,it);}
+  libGrid(store);refreshCounts();renderPicks();
+  toast(`${arr.length}장 추가${parsed?` · ${parsed}장 파일명 자동인식`:''}`);
+}
+
+/* ---------- settings ---------- */
+function loadSettingsUI(){const s=state.settings;
+  $('#s-key').value=s.apiKey;$('#s-model').value=s.model;$('#s-size').value=s.size;$('#s-quality').value=s.quality;$('#s-vision').value=s.vision;$('#s-base').value=s.base;
+  $('#s-logopos').value=s.logoPos;$('#s-logocolor').value=s.logoColor;$('#s-logosize').value=s.logoSize;$('#s-logodefault').checked=s.logoDefault!==false;$('#s-dna').value=s.brandDNA||'';$('#s-basemodel').value=s.baseModelPrompt||'';$('#s-gencount').value=s.genCount||2;$('#gen-n').value=s.genCount||2;
+  $('#s-supaurl').value=SUPABASE_URL||s.supaUrl||'';$('#s-supakey').value=SUPABASE_ANON_KEY||s.supaKey||'';$('#s-supabucket').value=SUPABASE_BUCKET||s.supaBucket||'duvetica-studio';
+  if(SUPABASE_URL){$('#s-supaurl').disabled=true;$('#s-supakey').placeholder='(배포 상수 사용 중)';}
+  renderCloudStatus();renderLogoPrev();updateKeyDot();}
+function renderCloudStatus(){const el=$('#cloud-status');if(!el)return;const on=cloudOn();el.textContent=on?'클라우드 연결됨':'로컬 전용';el.className='chip'+(on?' pine':'');}
+function renderLogoPrev(){$('#logo-prev').innerHTML=state.settings.logoDataUrl?`<img src="${state.settings.logoDataUrl}" style="max-height:60px;max-width:180px">`:`<span class="hint">이미지 없음 — 워드마크 텍스트로 합성</span>`;}
+function updateKeyDot(){const has=!!state.settings.apiKey;$('#keydot').classList.toggle('ok',has);$('#keylabel').textContent=has?'키 설정됨':'키 미설정';}
+async function saveSettings(){const s=state.settings;
+  s.apiKey=$('#s-key').value.trim();s.model=$('#s-model').value.trim()||'gpt-image-1';s.size=$('#s-size').value;s.quality=$('#s-quality').value;s.vision=$('#s-vision').value.trim();s.base=$('#s-base').value.trim()||'https://api.openai.com/v1';
+  s.logoPos=$('#s-logopos').value;s.logoColor=$('#s-logocolor').value;s.logoSize=+$('#s-logosize').value||15;s.logoDefault=$('#s-logodefault').checked;s.brandDNA=$('#s-dna').value.trim();s.baseModelPrompt=$('#s-basemodel').value.trim();s.genCount=+$('#s-gencount').value||2;
+  s.supaUrl=$('#s-supaurl').value.trim();s.supaKey=$('#s-supakey').value.trim();s.supaBucket=$('#s-supabucket').value.trim()||'duvetica-studio';
+  await putOf('settings',s);updateKeyDot();renderCloudStatus();$('#gen-n').value=s.genCount;updatePromptPrev();toast('설정 저장됨');}
+async function cloudTest(){if(!cloudOn()){toast('Supabase URL/키를 입력 후 저장하세요.');return;}try{await supaSelect('lines');toast('클라우드 연결 성공');}catch(e){toast('연결 실패: '+e.message);}}
+async function migrateToCloud(){
+  if(!cloudOn()){toast('먼저 Supabase URL/키를 저장하세요.');return;}
+  toast('업로드 중…');let n=0;
+  for(const s of CLOUD_STORES){for(const it of state[s]){try{const up=await uploadImages(s,it);await supaUpsert(s,{id:up.id,data:up});Object.assign(it,up);n++;}catch(e){console.error(s,it.id,e);}}}
+  renderAll();toast(`${n}개 항목 클라우드 업로드 완료`);}
+async function exportAll(){const data={settings:state.settings,lines:state.lines,refs:state.refs,models:state.models,fabrics:state.fabrics,gallery:state.gallery};const b=new Blob([JSON.stringify(data)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='duvetica_studio_backup.json';a.click();}
+async function exportDataset(){const rows=state.gallery.filter(g=>g.designJSON).map(g=>({base_image:g.sourceLineId,reference_images:g.refIds,fabric_image:g.fabricId,model_image:g.modelId,design_analysis_json:g.designJSON,final_prompt:g.prompt,output_id:g.id,season:g.season}));const b=new Blob([JSON.stringify(rows,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='duvetica_training_samples.json';a.click();toast(`${rows.length}개 샘플 내보냄`);}
+async function importAll(file){const data=JSON.parse(await file.text());for(const store of['lines','refs','models','fabrics','gallery']){if(Array.isArray(data[store]))for(const it of data[store]){state[store].push(it);await storePut(store,it);}}if(data.settings){Object.assign(state.settings,data.settings);state.settings.id='main';await putOf('settings',state.settings);}renderAll();loadSettingsUI();toast('가져오기 완료');}
+
+/* ---------- wiring ---------- */
+function switchView(v){$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));$$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));if(v==='gen')renderPicks();if(v==='gallery')galleryGrid();if(v==='compare')compareSelect();if(v==='settings')loadSettingsUI();}
+function renderAll(){['lines','refs','models','fabrics'].forEach(libGrid);refreshCounts();renderPicks();renderPills();galleryGrid();compareSelect();}
+function fillSeasonSelects(){$('#season').innerHTML=SEASONS.map(s=>`<option ${s==='27FW'?'selected':''}>${s}</option>`).join('');}
+
+function wire(){
+  $('#nav').addEventListener('click',e=>{const b=e.target.closest('button[data-v]');if(b)switchView(b.dataset.v);});
+  $('#libtabs').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;$$('#libtabs button').forEach(x=>x.classList.toggle('on',x===b));$$('.libpane').forEach(p=>p.style.display='none');$('#lib-'+b.dataset.t).style.display='block';});
+  $$('.drop[data-store]').forEach(d=>{d.addEventListener('click',()=>{uploadStore=d.dataset.store;$('#hidden-file').click();});d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('hot');});d.addEventListener('dragleave',()=>d.classList.remove('hot'));d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('hot');handleFiles(e.dataTransfer.files,d.dataset.store);});});
+  $('#drop-logo').addEventListener('click',()=>{uploadStore='__logo';$('#hidden-file').click();});
+  $('#hidden-file').addEventListener('change',e=>{if(e.target.files.length&&uploadStore)handleFiles(e.target.files,uploadStore);e.target.value='';});
+
+  document.addEventListener('click',async e=>{
+    const del=e.target.closest('[data-del]');if(del){const st=del.dataset.store;await storeDel(st,del.dataset.del);state[st]=state[st].filter(x=>x.id!==del.dataset.del);libGrid(st);refreshCounts();renderPicks();return;}
+    const gd=e.target.closest('[data-galdel]');if(gd){await storeDel('gallery',gd.dataset.galdel);state.gallery=state.gallery.filter(x=>x.id!==gd.dataset.galdel);galleryGrid();compareSelect();return;}
+    const card=e.target.closest('#grid-lines .card, #grid-refs .card, #grid-fabrics .card, #grid-models .card');
+    if(card&&!e.target.closest('.x')){openMeta(card.dataset.store,card.dataset.id);return;}
+    const gcard=e.target.closest('#grid-gallery .card');if(gcard&&!e.target.closest('.x')){openEdit(gcard.dataset.gid);return;}
+    const filt=e.target.closest('[data-filter]');if(filt){state.galFilter=filt.dataset.filter;galleryGrid();return;}
+    const lc=e.target.closest('[data-libstore]');if(lc){state.libFilter[lc.dataset.libstore][lc.dataset.axis]=lc.dataset.val;libGrid(lc.dataset.libstore);return;}
+    const arch=e.target.closest('[data-arch]');if(arch){openArchive(arch.dataset.arch);return;}
+    const un=e.target.closest('[data-unpick]');if(un){const st=un.dataset.unpick,id=un.dataset.uid;if(st==='lines')state.pick.line=null;else state.pick.refs.delete(id);renderPicks();return;}
+    const pk=e.target.closest('[data-pick]');if(pk){const st=pk.dataset.pick,id=pk.dataset.id;if(st==='models')state.pick.model=state.pick.model===id?null:id;else state.pick.fabric=state.pick.fabric===id?null:id;pickGrid(st);refreshJSON();return;}
+    const bp=e.target.closest('[data-pill]');if(bp){const cls=bp.dataset.pill,val=bp.dataset.val;const set=cls==='keep'?state.brief.keep:cls==='rep'?state.brief.replace:state.brief.adopt;set.has(val)?set.delete(val):set.add(val);renderPills();refreshJSON();return;}
+    const fp=e.target.closest('[data-fabpill]');if(fp){state.brief.fabricType=state.brief.fabricType===fp.dataset.fabpill?'':fp.dataset.fabpill;renderPills();refreshJSON();return;}
+  });
+
+  const sync=(id,vid,hid,fn)=>{const el=$('#'+id);el.addEventListener('input',()=>{$('#'+vid).textContent=el.value;if(hid)$('#'+hid).textContent=fn(el.value);refreshJSON();});};
+  sync('balance','balance-v','balance-h',balanceHint);sync('sheer','sheer-v','sheer-h',sheerHint);sync('shimmer','shimmer-v','shimmer-h',shimmerHint);
+  $('#balance-h').textContent=balanceHint(35);$('#sheer-h').textContent=sheerHint(20);$('#shimmer-h').textContent=shimmerHint(25);
+  $('#season').addEventListener('change',renderPicks);
+  $('#cat-parent').addEventListener('change',()=>applyCategory(true));
+  $('#cat-sub').addEventListener('change',()=>refreshJSON());
+  $('#model-source').addEventListener('change',()=>updatePromptPrev());
+  $('#extra').addEventListener('input',()=>refreshJSON());
+  $('#designjson').addEventListener('input',()=>{state.jsonDirty=true;updatePromptPrev();});
+  $('#btn-rebuild').addEventListener('click',()=>{state.jsonDirty=false;refreshJSON(true);toast('브리프로 재생성됨');});
+  $('#btn-analyze').addEventListener('click',analyzeRefs);
+  $('#btn-gen').addEventListener('click',doGenerate);
+  $('#showlogo').addEventListener('change',galleryGrid);
+  $('#cmp-select').addEventListener('change',e=>renderCompare(e.target.value));
+  $('#m-close').addEventListener('click',closeModal);
+  $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+  $('#btn-savesettings').addEventListener('click',saveSettings);
+  $('#btn-cloudtest').addEventListener('click',cloudTest);
+  $('#btn-cloudmigrate').addEventListener('click',migrateToCloud);
+  $('#btn-logoclear').addEventListener('click',async()=>{state.settings.logoDataUrl='';await putOf('settings',state.settings);renderLogoPrev();toast('로고 이미지 제거');});
+  $('#btn-export').addEventListener('click',exportAll);$('#btn-exportds').addEventListener('click',exportDataset);
+  $('#btn-import').addEventListener('click',()=>$('#hidden-json').click());
+  $('#hidden-json').addEventListener('change',e=>{if(e.target.files[0])importAll(e.target.files[0]);e.target.value='';});
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  await openDB();
+  if(memMode)toast('저장소를 열 수 없어 임시(세션) 모드입니다. 배포/다운로드본에서 영구 저장됩니다.');
+  const s=await getOf('settings','main');if(s)Object.assign(state.settings,s);
+  if(state.settings.model==='gpt-image-1')state.settings.model='gpt-image-2'; // 최신 기본으로 승격
+  if(state.settings.brandDNA==null)state.settings.brandDNA=DNA_DEFAULT;
+  if(state.settings.baseModelPrompt==null)state.settings.baseModelPrompt=BASE_MODEL_DEFAULT;
+  if(state.settings.genCount==null)state.settings.genCount=2;
+  if(state.settings.supaBucket==null)state.settings.supaBucket='duvetica-studio';
+  if(cloudOn())toast('클라우드(Supabase) 연결됨 · 공용 데이터 로드');
+  try{state.lines=await storeAll('lines');state.refs=await storeAll('refs');state.models=await storeAll('models');state.fabrics=await storeAll('fabrics');state.gallery=await storeAll('gallery');}catch(e){toast('클라우드 로드 실패, 로컬 데이터로 표시: '+e.message);state.lines=await allOf('lines');state.refs=await allOf('refs');state.models=await allOf('models');state.fabrics=await allOf('fabrics');state.gallery=await allOf('gallery');}
+  fillSeasonSelects();wire();applyCategory(true);renderAll();loadSettingsUI();updateKeyDot();refreshJSON(true);
+}
+boot();
+</script>
+</body>
+</html>
