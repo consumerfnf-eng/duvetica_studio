@@ -121,6 +121,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .miniver img{width:52px;height:70px;object-fit:cover;border-radius:7px;border:1px solid var(--line);cursor:pointer}
 .miniver img.on{outline:2px solid var(--pine);outline-offset:-2px}
 #toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#F4F1E7;padding:11px 20px;border-radius:24px;font-size:13px;opacity:0;transition:.25s;z-index:300;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:80vw;text-align:center}
+#lightbox{position:fixed;inset:0;z-index:400;background:rgba(20,19,12,.9);display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+#lightbox.on{display:flex}
+#lightbox img{max-width:96vw;max-height:96vh;object-fit:contain;border-radius:6px;box-shadow:0 12px 48px rgba(0,0,0,.55)}
+#lightbox .lb-close{position:fixed;top:16px;right:22px;color:#F4F1E7;font-size:22px;background:none;border:none;cursor:pointer;z-index:401}
+.preview.zoomable{cursor:zoom-in}
+.preview.zoomable::after{content:'🔍';position:absolute;bottom:8px;right:10px;font-size:14px;background:rgba(255,255,255,.92);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .hint{font-size:11.5px;color:var(--ink-45);margin-top:6px}
 .divider{height:1px;background:var(--line);margin:18px 0}
@@ -301,8 +307,9 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <p class="sub">생성 결과를 모아봅니다. 카드를 눌러 모델 변경 · 코디 변경 · SHEER/SHIMMER 재조절. 로고는 기본으로 합성됩니다.</p>
     <div class="row" style="justify-content:space-between;margin-bottom:10px">
       <div class="pillrow" id="gal-filter"></div>
-      <label class="row" style="font-size:12px;color:var(--ink-70);gap:6px"><input type="checkbox" id="showlogo" checked> 로고 표시</label>
+      <div class="row" style="gap:12px"><button class="btn sm" id="btn-gal-upload">＋ 이미지 업로드</button><label class="row" style="font-size:12px;color:var(--ink-70);gap:6px"><input type="checkbox" id="showlogo" checked> 로고 표시</label></div>
     </div>
+    <div class="drop" id="gal-drop" style="margin-bottom:14px;padding:16px"><b>여기로 이미지를 끌어다 놓아 갤러리에 바로 추가</b><br><span style="font-size:12px">생성 없이 완성 이미지를 올릴 수 있어요 · 파일명 <b>성별_카테고리_시즌_이름</b> 이면 자동 분류</span></div>
     <div id="grid-gallery" class="cards lg"></div>
   </section>
 
@@ -400,6 +407,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
   </div>
 </div>
 <div id="toast"></div>
+<div id="lightbox"><button class="lb-close">✕</button><img alt=""></div>
 <input type="file" id="hidden-file" accept="image/*" multiple style="display:none">
 <input type="file" id="hidden-json" accept="application/json" style="display:none">
 
@@ -509,6 +517,7 @@ const state={
 /* ---------- utils ---------- */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2800);}
+function openLightbox(src){const lb=$('#lightbox');lb.querySelector('img').src=src;lb.classList.add('on');}
 function esc(s){return(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function fileToDataUrl(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(f);});}
 function resizeDataUrl(du,max=1024){return new Promise(res=>{const img=new Image();img.onload=()=>{let{width:w,height:h}=img;if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/png'));};img.onerror=()=>res(du);img.src=du;});}
@@ -852,7 +861,8 @@ function galleryGrid(){
   $('#gal-filter').innerHTML=['all',...seasons].map(s=>`<button class="togglepill ${state.galFilter===s?'on':''}" data-filter="${s}">${s==='all'?'전체':esc(s)}</button>`).join('');
   if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">아직 생성물이 없습니다. 생성 탭에서 만들어보세요.</div>`;return;}
   const showLogo=$('#showlogo').checked;
-  grid.innerHTML=items.map(g=>`<div class="card" data-gid="${g.id}"><button class="x" data-galdel="${g.id}">✕</button><span class="thumb" style="background-image:url('${showLogo&&g.logoUrl?g.logoUrl:g.dataUrl}')"></span><div class="meta"><div class="nm">${esc(g.name)}</div><div class="tg">${esc(g.season)}${g.category?' · '+esc(g.category.parent):''} · S${g.sheer}/Sh${g.shimmer}${g.parentId?' · edit':''}</div></div></div>`).join('');
+  grid.innerHTML=items.map(g=>{const tg=g.uploaded?[esc(g.season),'업로드'].filter(Boolean).join(' · '):`${esc(g.season)}${g.category?' · '+esc(g.category.parent):''} · S${g.sheer}/Sh${g.shimmer}${g.parentId?' · edit':''}`;
+    return`<div class="card" data-gid="${g.id}"><button class="x" data-galdel="${g.id}">✕</button><span class="thumb" style="background-image:url('${showLogo&&g.logoUrl?g.logoUrl:g.dataUrl}')"></span><div class="meta"><div class="nm">${esc(g.name)}</div><div class="tg">${tg}</div></div></div>`;}).join('');
 }
 
 /* ---------- compare ---------- */
@@ -898,7 +908,7 @@ function openEdit(gid){
   $('#m-title').textContent='갤러리 수정 · '+editG.name;
   $('#m-body').innerHTML=`
     <div class="editgrid">
-      <div><div class="preview" id="edit-prev"><img src="${editG.logoUrl||editG.dataUrl}"></div>
+      <div><div class="preview zoomable" id="edit-prev"><img src="${editG.logoUrl||editG.dataUrl}"></div>
         <div class="miniver" id="edit-vers"></div>
         <button class="btn sm" style="margin-top:12px;width:100%;justify-content:center" id="edit-dl">이 이미지 다운로드</button></div>
       <div>
@@ -925,6 +935,7 @@ function openEdit(gid){
   $('#edit-cody-go').onclick=()=>{const t=$('#edit-cody').value.trim();if(!t){toast('코디 내용을 입력하세요.');return;}runEdit('cody',{text:t});};
   $('#edit-finish-go').onclick=()=>runEdit('finish',{sheer:+$('#e-sheer').value,shimmer:+$('#e-shimmer').value,volume:+$('#e-volume').value});
   $('#edit-dl').onclick=()=>{const cur=state.gallery.find(g=>g.id===editShown);download(cur.logoUrl||cur.dataUrl,cur.name+'.png');};
+  $('#edit-prev').onclick=()=>{const cur=state.gallery.find(g=>g.id===editShown)||editG;openLightbox(cur.logoUrl||cur.dataUrl);};
   $('#modal').classList.add('on');
 }
 function editVersions(){const root=editG.parentId||editG.id;return state.gallery.filter(g=>g.id===root||g.parentId===root);}
@@ -988,6 +999,15 @@ function parseName(fn){
 }
 async function handleFiles(files,store){
   if(store==='__logo'){let du=await fileToDataUrl(files[0]);du=await resizeDataUrl(du,600);state.settings.logoDataUrl=du;await putOf('settings',state.settings);renderLogoPrev();toast('로고 저장됨');return;}
+  if(store==='__gallery'){
+    const arr=[...files].filter(f=>f.type.startsWith('image/'));let parsed=0;
+    for(const f of arr){let du=await fileToDataUrl(f);du=await resizeDataUrl(du,1024);
+      const m=parseName(f.name);if(m.ok)parsed++;
+      const g={id:uid(),name:m.name,dataUrl:du,logoUrl:du,season:m.season||'',gender:m.gender||'',gcat:m.gcat||'',uploaded:true,sourceLineId:null,parentId:null,createdAt:Date.now()};
+      state.gallery.push(g);await storePut('gallery',g);}
+    galleryGrid();compareSelect();
+    toast(`${arr.length}장 갤러리에 추가${parsed?` · ${parsed}장 파일명 자동인식`:''}`);return;
+  }
   const arr=[...files].filter(f=>f.type.startsWith('image/'));let parsed=0;
   for(const f of arr){let du=await fileToDataUrl(f);du=await resizeDataUrl(du,1024);
     const m=parseName(f.name);if(m.ok)parsed++;
@@ -1035,6 +1055,12 @@ function wire(){
   $('#libtabs').addEventListener('click',e=>{const b=e.target.closest('button[data-t]');if(!b)return;$$('#libtabs button').forEach(x=>x.classList.toggle('on',x===b));$$('.libpane').forEach(p=>p.style.display='none');$('#lib-'+b.dataset.t).style.display='block';});
   $$('.drop[data-store]').forEach(d=>{d.addEventListener('click',()=>{uploadStore=d.dataset.store;$('#hidden-file').click();});d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('hot');});d.addEventListener('dragleave',()=>d.classList.remove('hot'));d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('hot');handleFiles(e.dataTransfer.files,d.dataset.store);});});
   $('#drop-logo').addEventListener('click',()=>{uploadStore='__logo';$('#hidden-file').click();});
+  $('#btn-gal-upload').addEventListener('click',()=>{uploadStore='__gallery';$('#hidden-file').click();});
+  const gdrop=$('#gal-drop');
+  gdrop.addEventListener('click',()=>{uploadStore='__gallery';$('#hidden-file').click();});
+  gdrop.addEventListener('dragover',e=>{e.preventDefault();gdrop.classList.add('hot');});
+  gdrop.addEventListener('dragleave',()=>gdrop.classList.remove('hot'));
+  gdrop.addEventListener('drop',e=>{e.preventDefault();gdrop.classList.remove('hot');handleFiles(e.dataTransfer.files,'__gallery');});
   $('#hidden-file').addEventListener('change',e=>{if(e.target.files.length&&uploadStore)handleFiles(e.target.files,uploadStore);e.target.value='';});
 
   document.addEventListener('click',async e=>{
@@ -1068,6 +1094,7 @@ function wire(){
   $('#cmp-select').addEventListener('change',e=>renderCompare(e.target.value));
   $('#m-close').addEventListener('click',closeModal);
   $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+  $('#lightbox').addEventListener('click',()=>$('#lightbox').classList.remove('on'));
   $('#btn-savesettings').addEventListener('click',saveSettings);
   $('#btn-cloudtest').addEventListener('click',cloudTest);
   $('#btn-cloudmigrate').addEventListener('click',migrateToCloud);
