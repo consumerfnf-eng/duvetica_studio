@@ -126,6 +126,16 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 #lightbox img{max-width:96vw;max-height:96vh;object-fit:contain;border-radius:6px;box-shadow:0 12px 48px rgba(0,0,0,.55)}
 #lightbox .lb-close{position:fixed;top:16px;right:22px;color:#F4F1E7;font-size:22px;background:none;border:none;cursor:pointer;z-index:401}
 .preview.zoomable{cursor:zoom-in}
+.rankbadges{position:absolute;top:6px;left:6px;z-index:3;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.acard .rankbadges{left:auto;right:6px;align-items:flex-end}
+.rankbadge{color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.02em;padding:2px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.rankbadge.fw{background:#C0392B}
+.rankbadge.ss{background:#2C6BB3}
+.salerow{display:flex;flex-direction:column;gap:1px;margin-top:2px}
+.saleamt{font-size:10px;font-weight:700}
+.saleamt.fw{color:#C0392B}
+.saleamt.ss{color:#2C6BB3}
+.saleamt.dim{color:var(--ink-45);font-weight:600}
 .preview.zoomable::after{content:'🔍';position:absolute;bottom:8px;right:10px;font-size:14px;background:rgba(255,255,255,.92);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .hint{font-size:11.5px;color:var(--ink-45);margin-top:6px}
@@ -387,6 +397,13 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <div class="row" style="margin-top:12px"><button class="btn sm" id="btn-cloudtest">연결 테스트</button><button class="btn sm" id="btn-cloudmigrate">로컬 데이터 → 클라우드 업로드</button></div>
     </div>
     <div class="panel" style="margin-top:16px">
+      <div class="sectlabel">판매 랭킹 · 라이브러리 카드에 표시</div>
+      <div class="hint" style="margin-top:4px">시즌별 판매 데이터를 붙여넣으세요(헤더 포함 탭/CSV 지원). 라인 카드의 <b>이름(제품명)</b>이 시즌+제품명으로 정확히 일치하면 <span style="color:#C0392B;font-weight:700">빨간 순위 배지</span>와 판매액이 카드에 표시됩니다. 클라우드에 저장되어 공용 공유됩니다.</div>
+      <textarea id="s-sales" class="inp mono" style="min-height:120px;margin-top:10px" placeholder="SESN	ITEM	ITEM_NM	PRDT_CD	PRDT_NM	SALE_AMT	SALE_QTY	SEASON_AMT	SHARE_PCT	SALE_AMT_STR
+25F	DJ	다운점퍼	V25FVDDJ31656	알로로 벨벳	1854309620	1491	14192809800	13.1	18.54억원"></textarea>
+      <div class="row" style="margin-top:10px"><button class="btn sm primary" id="btn-sales-apply">적용</button><span id="sales-status" class="hint" style="margin:0"></span></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
       <div class="row" style="justify-content:space-between">
         <div><b>저장</b><div class="hint" style="margin:2px 0 0">설정·DNA를 저장합니다.</div></div>
         <button class="btn primary" id="btn-savesettings">설정 저장</button>
@@ -420,9 +437,9 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
    ============================================================ */
 
 /* ---------- storage ---------- */
-const STORES=['settings','lines','refs','models','fabrics','gallery'];
+const STORES=['settings','lines','refs','models','fabrics','gallery','sales'];
 let db=null,memMode=false;
-const mem={settings:new Map(),lines:new Map(),refs:new Map(),models:new Map(),fabrics:new Map(),gallery:new Map()};
+const mem={settings:new Map(),lines:new Map(),refs:new Map(),models:new Map(),fabrics:new Map(),gallery:new Map(),sales:new Map()};
 function openDB(){return new Promise(res=>{try{
   const r=indexedDB.open('duvetica_studio',2);
   r.onupgradeneeded=e=>{const d=e.target.result;STORES.forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});};
@@ -443,7 +460,7 @@ async function getOf(s,id){if(memMode)return mem[s].get(id)||null;return new Pro
 const SUPABASE_URL='https://batnckyzqsaszaoyiwsk.supabase.co';        // 회사 공용
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhdG5ja3l6cXNhc3phb3lpd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMTM0NDYsImV4cCI6MjEwMjc4OTQ0Nn0.jiZe4AfXEsyvVM7x5OhC_01hy8L0JC23Oi13G4di12Y';   // anon public
 const SUPABASE_BUCKET='duvetica-studio';
-const CLOUD_STORES=['lines','refs','models','fabrics','gallery']; // settings는 개인 로컬 유지
+const CLOUD_STORES=['lines','refs','models','fabrics','gallery','sales']; // settings는 개인 로컬 유지
 function supaCfg(){return{url:(SUPABASE_URL||state.settings.supaUrl||'').replace(/\/$/,''),key:SUPABASE_ANON_KEY||state.settings.supaKey||'',bucket:SUPABASE_BUCKET||state.settings.supaBucket||'duvetica-studio'};}
 function cloudOn(){const c=supaCfg();return!!(c.url&&c.key);}
 async function supaSelect(table){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${c.key}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
@@ -511,7 +528,8 @@ const state={
   pick:{line:null,refs:new Set(),model:null,fabric:null},
   brief:{keep:new Set(),replace:new Set(),adopt:new Set(),fabricType:''},
   aiAttrs:{}, jsonDirty:false, galFilter:'all',
-  libFilter:{lines:{gender:'ALL',gcat:'ALL',season:'ALL'},refs:{gender:'ALL',gcat:'ALL',season:'ALL'}}
+  libFilter:{lines:{gender:'ALL',gcat:'ALL',season:'ALL'},refs:{gender:'ALL',gcat:'ALL',season:'ALL'}},
+  salesMap:{}, salesRaw:''
 };
 
 /* ---------- utils ---------- */
@@ -745,7 +763,13 @@ function libGrid(store){
   const filtered=store==='lines'||store==='refs';
   if(filtered){renderLibChips(store);items=items.filter(it=>matchFilter(store,it));}
   if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">${filtered&&hasActiveFilter(store)?'해당 조건의 항목이 없습니다.':'아직 없습니다. 위에서 올려주세요.'}</div>`;return;}
-  grid.innerHTML=items.map(it=>`<div class="card ${sw}" data-id="${it.id}" data-store="${store}"><button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`).join('');
+  grid.innerHTML=items.map(it=>{
+    const sales=store==='lines'?salesFor(it):[];
+    const _b=sales.filter(s=>s.rank<=10).map(s=>`<span class="rankbadge ${s.half==='SS'?'ss':'fw'}">${s.half} #${s.rank}</span>`).join('');
+    const rb=_b?`<div class="rankbadges">${_b}</div>`:'';
+    const sa=sales.length?`<div class="salerow">`+sales.map(s=>`<span class="saleamt ${s.rank<=10?(s.half==='SS'?'ss':'fw'):'dim'}">${esc(s.season)} ${esc(s.amtStr)}</span>`).join('')+`</div>`:'';
+    return`<div class="card ${sw}" data-id="${it.id}" data-store="${store}">${rb}<button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
+  }).join('');
 }
 function matchFilter(store,it){const f=state.libFilter[store];if(!f)return true;return(f.gender==='ALL'||it.gender===f.gender)&&(f.gcat==='ALL'||it.gcat===f.gcat)&&(f.season==='ALL'||it.season===f.season);}
 function hasActiveFilter(store){const f=state.libFilter[store];return f&&(f.gender!=='ALL'||f.gcat!=='ALL'||f.season!=='ALL');}
@@ -818,7 +842,11 @@ function openArchive(store){
     if(!items.length){gridEl.innerHTML=`<div class="empty" style="grid-column:1/-1">조건에 맞는 항목이 없습니다.</div>`;return;}
     gridEl.innerHTML=items.map(it=>{
       const on=isLines?state.pick.line===it.id:state.pick.refs.has(it.id);
-      return`<div class="acard ${on?'sel':''}" data-aid="${it.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="br">DUVETICA${it.season?' · '+esc(it.season):''}</div><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`;
+      const sales=isLines?salesFor(it):[];
+      const _b=sales.filter(s=>s.rank<=10).map(s=>`<span class="rankbadge ${s.half==='SS'?'ss':'fw'}">${s.half} #${s.rank}</span>`).join('');
+      const rb=_b?`<div class="rankbadges">${_b}</div>`:'';
+      const sa=sales.length?`<div class="salerow">`+sales.map(s=>`<span class="saleamt ${s.rank<=10?(s.half==='SS'?'ss':'fw'):'dim'}">${esc(s.season)} ${esc(s.amtStr)}</span>`).join('')+`</div>`:'';
+      return`<div class="acard ${on?'sel':''}" data-aid="${it.id}">${rb}<span class="pick">✓</span><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="br">DUVETICA${it.season?' · '+esc(it.season):''}</div><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
     }).join('');
   }
   chips();render();
@@ -984,6 +1012,52 @@ function normSeason(tok){
   const h=m[2].toLowerCase();
   return m[1]+((h==='ss'||h==='s')?'SS':'FW');
 }
+/* ---------- 판매 랭킹 ---------- */
+function salesKey(season,name){return (season||'')+'\u0000'+(name||'').trim();}
+function seasonHalf(season){return /FW$/i.test(season||'')?'FW':/SS$/i.test(season||'')?'SS':'';}
+/* 카드 아이템의 이름으로 FW·SS 각각의 랭크를 찾아 반환 (자기 시즌 우선, 없으면 같은 half 최신) */
+function salesFor(it){
+  const out=[];
+  const exact=state.salesMap[salesKey(it.season,it.name)];
+  const halves={FW:null,SS:null};
+  if(exact)halves[seasonHalf(it.season)]=exact;
+  // 이름이 같은 다른 시즌 엔트리들에서 FW/SS 대표 랭크 보강
+  const nm=(it.name||'').trim();
+  Object.values(state.salesMap).forEach(e=>{
+    if(e.name!==nm)return;const h=seasonHalf(e.season);if(!h)return;
+    if(!halves[h]||(e.season>halves[h].season))halves[h]=e;
+  });
+  ['FW','SS'].forEach(h=>{if(halves[h])out.push(Object.assign({half:h},halves[h]));});
+  return out;
+}
+function parseSales(text){
+  const lines=(text||'').split(/\r?\n/).map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim());
+  if(!lines.length)return{map:{},count:0};
+  const split=l=>l.indexOf('\t')>=0?l.split('\t'):l.split(/\s{2,}|,/);
+  let header=null,start=0;
+  const h0=split(lines[0]).map(s=>s.trim().toUpperCase());
+  if(h0.includes('PRDT_NM')||h0.includes('SESN')){header=h0;start=1;}
+  const col=(cols,name,fb)=>{if(header){const i=header.indexOf(name);return i>=0?(cols[i]||''):'';}return cols[fb]||'';};
+  const rows=[];
+  for(let i=start;i<lines.length;i++){
+    const cols=split(lines[i]).map(s=>s.trim());
+    const sesn=col(cols,'SESN',0),pname=col(cols,'PRDT_NM',4),amt=col(cols,'SALE_AMT',5),amtStr=col(cols,'SALE_AMT_STR',9),share=col(cols,'SHARE_PCT',8);
+    if(!pname)continue;
+    rows.push({season:normSeason(sesn)||sesn.toUpperCase(),name:pname,amt:parseFloat((amt||'').replace(/[^0-9.]/g,''))||0,amtStr:amtStr||'',share:parseFloat(share)||0});
+  }
+  const bySeason={};rows.forEach(r=>{(bySeason[r.season]=bySeason[r.season]||[]).push(r);});
+  const map={};
+  Object.values(bySeason).forEach(arr=>{arr.sort((a,b)=>b.amt-a.amt);arr.forEach((r,idx)=>{map[salesKey(r.season,r.name)]={rank:idx+1,amtStr:r.amtStr,amt:r.amt,share:r.share,name:r.name,season:r.season};});});
+  return{map,count:rows.length};
+}
+async function applySales(){
+  const raw=$('#s-sales').value;const{map,count}=parseSales(raw);
+  state.salesMap=map;state.salesRaw=raw;
+  try{await storePut('sales',{id:'main',map,raw,updatedAt:Date.now()});}catch(e){toast('클라우드 저장 실패(로컬 반영): '+e.message);}
+  libGrid('lines');
+  $('#sales-status').textContent=`${count}개 행 · 매칭키 ${Object.keys(map).length}개 적용됨`;
+  toast('판매 랭킹 적용됨');
+}
 function parseName(fn){
   const base=fn.replace(/\.[^.]+$/,'');
   const parts=base.split('_').map(s=>s.trim()).filter(Boolean);
@@ -1026,7 +1100,7 @@ function loadSettingsUI(){const s=state.settings;
   $('#s-logopos').value=s.logoPos;$('#s-logocolor').value=s.logoColor;$('#s-logosize').value=s.logoSize;$('#s-logodefault').checked=s.logoDefault!==false;$('#s-dna').value=s.brandDNA||'';$('#s-basemodel').value=s.baseModelPrompt||'';$('#s-gencount').value=s.genCount||2;$('#gen-n').value=s.genCount||2;
   $('#s-supaurl').value=SUPABASE_URL||s.supaUrl||'';$('#s-supakey').value=SUPABASE_ANON_KEY||s.supaKey||'';$('#s-supabucket').value=SUPABASE_BUCKET||s.supaBucket||'duvetica-studio';
   if(SUPABASE_URL){$('#s-supaurl').disabled=true;$('#s-supakey').placeholder='(배포 상수 사용 중)';}
-  renderCloudStatus();renderLogoPrev();updateKeyDot();}
+  renderCloudStatus();renderLogoPrev();updateKeyDot();const se=$('#s-sales');if(se)se.value=state.salesRaw||'';}
 function renderCloudStatus(){const el=$('#cloud-status');if(!el)return;const on=cloudOn();el.textContent=on?'클라우드 연결됨':'로컬 전용';el.className='chip'+(on?' pine':'');}
 function renderLogoPrev(){$('#logo-prev').innerHTML=state.settings.logoDataUrl?`<img src="${state.settings.logoDataUrl}" style="max-height:60px;max-width:180px">`:`<span class="hint">이미지 없음 — 워드마크 텍스트로 합성</span>`;}
 function updateKeyDot(){const has=!!state.settings.apiKey;$('#keydot').classList.toggle('ok',has);$('#keylabel').textContent=has?'키 설정됨':'키 미설정';}
@@ -1098,6 +1172,7 @@ function wire(){
   $('#btn-savesettings').addEventListener('click',saveSettings);
   $('#btn-cloudtest').addEventListener('click',cloudTest);
   $('#btn-cloudmigrate').addEventListener('click',migrateToCloud);
+  $('#btn-sales-apply').addEventListener('click',applySales);
   $('#btn-logoclear').addEventListener('click',async()=>{state.settings.logoDataUrl='';await putOf('settings',state.settings);renderLogoPrev();toast('로고 이미지 제거');});
   $('#btn-export').addEventListener('click',exportAll);$('#btn-exportds').addEventListener('click',exportDataset);
   $('#btn-import').addEventListener('click',()=>$('#hidden-json').click());
@@ -1116,6 +1191,7 @@ async function boot(){
   if(state.settings.supaBucket==null)state.settings.supaBucket='duvetica-studio';
   if(cloudOn())toast('클라우드(Supabase) 연결됨 · 공용 데이터 로드');
   try{state.lines=await storeAll('lines');state.refs=await storeAll('refs');state.models=await storeAll('models');state.fabrics=await storeAll('fabrics');state.gallery=await storeAll('gallery');}catch(e){toast('클라우드 로드 실패, 로컬 데이터로 표시: '+e.message);state.lines=await allOf('lines');state.refs=await allOf('refs');state.models=await allOf('models');state.fabrics=await allOf('fabrics');state.gallery=await allOf('gallery');}
+  try{const sr=await storeAll('sales');const main=sr.find(x=>x.id==='main')||sr[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';}}catch(e){}
   fillSeasonSelects();wire();applyCategory(true);renderAll();loadSettingsUI();updateKeyDot();refreshJSON(true);
 }
 boot();
