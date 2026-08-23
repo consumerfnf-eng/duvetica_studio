@@ -441,7 +441,7 @@ const STORES=['settings','lines','refs','models','fabrics','gallery','sales'];
 let db=null,memMode=false;
 const mem={settings:new Map(),lines:new Map(),refs:new Map(),models:new Map(),fabrics:new Map(),gallery:new Map(),sales:new Map()};
 function openDB(){return new Promise(res=>{try{
-  const r=indexedDB.open('duvetica_studio',2);
+  const r=indexedDB.open('duvetica_studio',3);
   r.onupgradeneeded=e=>{const d=e.target.result;STORES.forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});});};
   r.onsuccess=e=>{db=e.target.result;res(true);};
   r.onerror=()=>{memMode=true;res(false);};r.onblocked=()=>{memMode=true;res(false);};
@@ -1053,7 +1053,9 @@ function parseSales(text){
 async function applySales(){
   const raw=$('#s-sales').value;const{map,count}=parseSales(raw);
   state.salesMap=map;state.salesRaw=raw;
-  try{await storePut('sales',{id:'main',map,raw,updatedAt:Date.now()});}catch(e){toast('클라우드 저장 실패(로컬 반영): '+e.message);}
+  const doc={id:'main',map,raw,updatedAt:Date.now()};
+  try{await putOf('sales',doc);}catch(e){}                    // 로컬 저장 (새로고침 유지)
+  if(cloudOn()){try{await supaUpsert('sales',{id:'main',data:doc});}catch(e){toast('클라우드 저장 실패 — Supabase에 sales 테이블을 만들어주세요');}}
   libGrid('lines');
   $('#sales-status').textContent=`${count}개 행 · 매칭키 ${Object.keys(map).length}개 적용됨`;
   toast('판매 랭킹 적용됨');
@@ -1191,7 +1193,7 @@ async function boot(){
   if(state.settings.supaBucket==null)state.settings.supaBucket='duvetica-studio';
   if(cloudOn())toast('클라우드(Supabase) 연결됨 · 공용 데이터 로드');
   try{state.lines=await storeAll('lines');state.refs=await storeAll('refs');state.models=await storeAll('models');state.fabrics=await storeAll('fabrics');state.gallery=await storeAll('gallery');}catch(e){toast('클라우드 로드 실패, 로컬 데이터로 표시: '+e.message);state.lines=await allOf('lines');state.refs=await allOf('refs');state.models=await allOf('models');state.fabrics=await allOf('fabrics');state.gallery=await allOf('gallery');}
-  try{const sr=await storeAll('sales');const main=sr.find(x=>x.id==='main')||sr[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';}}catch(e){}
+  try{let sr;try{sr=await storeAll('sales');}catch(e){sr=await allOf('sales');}const main=(sr||[]).find(x=>x.id==='main')||(sr||[])[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';}}catch(e){}
   fillSeasonSelects();wire();applyCategory(true);renderAll();loadSettingsUI();updateKeyDot();refreshJSON(true);
 }
 boot();
