@@ -464,7 +464,7 @@ const CLOUD_STORES=['lines','refs','models','fabrics','gallery','sales']; // set
 function supaCfg(){return{url:(SUPABASE_URL||state.settings.supaUrl||'').replace(/\/$/,''),key:SUPABASE_ANON_KEY||state.settings.supaKey||'',bucket:SUPABASE_BUCKET||state.settings.supaBucket||'duvetica-studio'};}
 function cloudOn(){const c=supaCfg();return!!(c.url&&c.key);}
 async function supaSelect(table){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${c.key}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
-async function supaUpsert(table,row){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
+async function supaUpsert(table,row){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=id`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
 async function supaDelete(table,id){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,Prefer:'return=minimal'}});if(!r.ok)throw new Error(`delete ${table} ${r.status}`);}
 async function supaUpload(path,blob){const c=supaCfg();const r=await fetch(`${c.url}/storage/v1/object/${c.bucket}/${path}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':blob.type||'image/png','x-upsert':'true'},body:blob});if(!r.ok)throw new Error(`upload ${r.status} ${await r.text()}`);return `${c.url}/storage/v1/object/public/${c.bucket}/${path}`;}
 async function uploadImages(store,item){
@@ -1053,12 +1053,15 @@ function parseSales(text){
 async function applySales(){
   const raw=$('#s-sales').value;const{map,count}=parseSales(raw);
   state.salesMap=map;state.salesRaw=raw;
-  const doc={id:'main',map,raw,updatedAt:Date.now()};
-  try{await putOf('sales',doc);}catch(e){}                    // 로컬 저장 (새로고침 유지)
-  if(cloudOn()){try{await supaUpsert('sales',{id:'main',data:doc});}catch(e){toast('클라우드 저장 실패 — Supabase에 sales 테이블을 만들어주세요');}}
+  const doc={map,raw,updatedAt:Date.now()};
+  try{localStorage.setItem('duvetica_sales',JSON.stringify(doc));}catch(e){}   // 로컬 확실 저장 (새로고침 유지)
+  try{await putOf('sales',{id:'main',...doc});}catch(e){}                       // IndexedDB 캐시(있으면)
   libGrid('lines');
   $('#sales-status').textContent=`${count}개 행 · 매칭키 ${Object.keys(map).length}개 적용됨`;
-  toast('판매 랭킹 적용됨');
+  if(cloudOn()){
+    try{await supaUpsert('sales',{id:'main',data:{id:'main',...doc}});toast('판매 랭킹 적용 · 클라우드 저장됨(공용)');}
+    catch(e){toast('로컬 저장됨 · 클라우드 실패 — Supabase에 sales 테이블을 만들어주세요');}
+  }else toast('판매 랭킹 적용됨(로컬)');
 }
 function parseName(fn){
   const base=fn.replace(/\.[^.]+$/,'');
@@ -1193,7 +1196,12 @@ async function boot(){
   if(state.settings.supaBucket==null)state.settings.supaBucket='duvetica-studio';
   if(cloudOn())toast('클라우드(Supabase) 연결됨 · 공용 데이터 로드');
   try{state.lines=await storeAll('lines');state.refs=await storeAll('refs');state.models=await storeAll('models');state.fabrics=await storeAll('fabrics');state.gallery=await storeAll('gallery');}catch(e){toast('클라우드 로드 실패, 로컬 데이터로 표시: '+e.message);state.lines=await allOf('lines');state.refs=await allOf('refs');state.models=await allOf('models');state.fabrics=await allOf('fabrics');state.gallery=await allOf('gallery');}
-  try{let sr;try{sr=await storeAll('sales');}catch(e){sr=await allOf('sales');}const main=(sr||[]).find(x=>x.id==='main')||(sr||[])[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';}}catch(e){}
+  try{
+    let loaded=false;
+    if(cloudOn()){try{const sr=await supaSelect('sales');const main=sr.find(x=>x.id==='main')||sr[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';loaded=true;}}catch(e){}}
+    if(!loaded){try{const d=JSON.parse(localStorage.getItem('duvetica_sales')||'null');if(d){state.salesMap=d.map||{};state.salesRaw=d.raw||'';loaded=true;}}catch(e){}}
+    if(!loaded){try{const v=await allOf('sales');const main=(v||[]).find(x=>x.id==='main')||(v||[])[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';}}catch(e){}}
+  }catch(e){}
   fillSeasonSelects();wire();applyCategory(true);renderAll();loadSettingsUI();updateKeyDot();refreshJSON(true);
 }
 boot();
