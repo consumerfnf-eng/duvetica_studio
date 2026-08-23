@@ -465,6 +465,13 @@ function supaCfg(){return{url:(SUPABASE_URL||state.settings.supaUrl||'').replace
 function cloudOn(){const c=supaCfg();return!!(c.url&&c.key);}
 async function supaSelect(table){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${c.key}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
 async function supaUpsert(table,row){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=id`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
+/* upsert가 막히는 프로젝트를 위한 확실한 저장: 기존 id 삭제 후 삽입 */
+async function supaPutRow(table,row){
+  const c=supaCfg();
+  try{await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(row.id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,Prefer:'return=minimal'}});}catch(e){}
+  const r=await fetch(`${c.url}/rest/v1/${table}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});
+  if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);
+}
 async function supaDelete(table,id){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,Prefer:'return=minimal'}});if(!r.ok)throw new Error(`delete ${table} ${r.status}`);}
 async function supaUpload(path,blob){const c=supaCfg();const r=await fetch(`${c.url}/storage/v1/object/${c.bucket}/${path}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':blob.type||'image/png','x-upsert':'true'},body:blob});if(!r.ok)throw new Error(`upload ${r.status} ${await r.text()}`);return `${c.url}/storage/v1/object/public/${c.bucket}/${path}`;}
 async function uploadImages(store,item){
@@ -1013,7 +1020,7 @@ function normSeason(tok){
   return m[1]+((h==='ss'||h==='s')?'SS':'FW');
 }
 /* ---------- 판매 랭킹 ---------- */
-function salesKey(season,name){return (season||'')+'\u0000'+(name||'').trim();}
+function salesKey(season,name){return (season||'')+'~||~'+(name||'').trim();}
 function seasonHalf(season){return /FW$/i.test(season||'')?'FW':/SS$/i.test(season||'')?'SS':'';}
 /* 카드 아이템의 이름으로 FW·SS 각각의 랭크를 찾아 반환 (자기 시즌 우선, 없으면 같은 half 최신) */
 function salesFor(it){
@@ -1059,8 +1066,8 @@ async function applySales(){
   libGrid('lines');
   $('#sales-status').textContent=`${count}개 행 · 매칭키 ${Object.keys(map).length}개 적용됨`;
   if(cloudOn()){
-    try{await supaUpsert('sales',{id:'main',data:{id:'main',...doc}});toast('판매 랭킹 적용 · 클라우드 저장됨(공용)');}
-    catch(e){toast('로컬 저장됨 · 클라우드 실패 — Supabase에 sales 테이블을 만들어주세요');}
+    try{await supaPutRow('sales',{id:'main',data:{id:'main',...doc}});toast('판매 랭킹 적용 · 클라우드 저장됨(공용)');}
+    catch(e){toast('로컬 저장됨 · 클라우드 실패: '+e.message);}
   }else toast('판매 랭킹 적용됨(로컬)');
 }
 function parseName(fn){
@@ -1113,7 +1120,8 @@ async function saveSettings(){const s=state.settings;
   s.apiKey=$('#s-key').value.trim();s.model=$('#s-model').value.trim()||'gpt-image-1';s.size=$('#s-size').value;s.quality=$('#s-quality').value;s.vision=$('#s-vision').value.trim();s.base=$('#s-base').value.trim()||'https://api.openai.com/v1';
   s.logoPos=$('#s-logopos').value;s.logoColor=$('#s-logocolor').value;s.logoSize=+$('#s-logosize').value||15;s.logoDefault=$('#s-logodefault').checked;s.brandDNA=$('#s-dna').value.trim();s.baseModelPrompt=$('#s-basemodel').value.trim();s.genCount=+$('#s-gencount').value||2;
   s.supaUrl=$('#s-supaurl').value.trim();s.supaKey=$('#s-supakey').value.trim();s.supaBucket=$('#s-supabucket').value.trim()||'duvetica-studio';
-  await putOf('settings',s);updateKeyDot();renderCloudStatus();$('#gen-n').value=s.genCount;updatePromptPrev();toast('설정 저장됨');}
+  await putOf('settings',s);updateKeyDot();renderCloudStatus();$('#gen-n').value=s.genCount;updatePromptPrev();
+  if($('#s-sales')&&$('#s-sales').value.trim()){await applySales();}else toast('설정 저장됨');}
 async function cloudTest(){if(!cloudOn()){toast('Supabase URL/키를 입력 후 저장하세요.');return;}try{await supaSelect('lines');toast('클라우드 연결 성공');}catch(e){toast('연결 실패: '+e.message);}}
 async function migrateToCloud(){
   if(!cloudOn()){toast('먼저 Supabase URL/키를 저장하세요.');return;}
