@@ -127,6 +127,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 #lightbox .lb-close{position:fixed;top:16px;right:22px;color:#F4F1E7;font-size:22px;background:none;border:none;cursor:pointer;z-index:401}
 .preview.zoomable{cursor:zoom-in}
 .rankbadges{position:absolute;top:6px;left:6px;z-index:3;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.bulkbar{margin-top:12px}
+.inp.sm{padding:5px 8px;font-size:12px;height:auto;width:auto;min-width:96px}
+.btn.xs{padding:5px 10px;font-size:11px}
+.selbox{position:absolute;top:6px;right:34px;width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,.92);border:1.5px solid var(--ink-45);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--pine);z-index:3}
+.selbox.on{background:var(--pine);border-color:var(--pine);color:#fff}
+.card.picked{outline:2px solid var(--pine);outline-offset:-2px}
 .acard .rankbadges{left:auto;right:6px;align-items:flex-end}
 .rankbadge{color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.02em;padding:2px 6px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .rankbadge.fw{background:#C0392B}
@@ -208,6 +214,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <div id="lib-lines" class="libpane">
       <div class="panel">
         <div class="drop" data-store="lines"><b>라인 이미지 올리기</b><br><span style="font-size:12px">기존 룩북 컷 · 여러 장 한번에 · 파일명 <b>성별_카테고리_시즌_아이템명</b> 이면 자동 분류</span></div>
+        <div class="bulkbar" data-store="lines"></div>
         <div class="arch-chips" id="lib-lines-chips" style="margin:14px 0 0"></div>
         <div id="grid-lines" class="cards lg"></div>
       </div>
@@ -215,6 +222,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <div id="lib-refs" class="libpane" style="display:none">
       <div class="panel">
         <div class="drop" data-store="refs"><b>레퍼런스 이미지 올리기</b><br><span style="font-size:12px">채용할 디자인(카라·퀼팅·실루엣·핏) 레퍼런스 · 파일명 <b>성별_카테고리_시즌_이름</b> 이면 자동 분류</span></div>
+        <div class="bulkbar" data-store="refs"></div>
         <div class="arch-chips" id="lib-refs-chips" style="margin:14px 0 0"></div>
         <div id="grid-refs" class="cards lg"></div>
       </div>
@@ -366,7 +374,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
         <div id="logo-prev" style="margin-top:10px;text-align:center"></div>
         <div class="row" style="margin-top:10px">
           <div style="flex:1"><label class="fld">위치</label>
-            <select id="s-logopos" class="inp"><option value="bl">좌하단</option><option value="br">우하단</option><option value="bc" selected>하단 중앙</option><option value="tl">좌상단</option></select></div>
+            <select id="s-logopos" class="inp"><option value="lc">좌측 가슴</option><option value="rc">우측 가슴</option><option value="bl">좌하단</option><option value="br">우하단</option><option value="bc" selected>하단 중앙</option><option value="tl">좌상단</option></select></div>
           <div style="flex:1"><label class="fld">색(텍스트)</label>
             <select id="s-logocolor" class="inp"><option value="dark">다크</option><option value="light">라이트</option></select></div>
           <div style="width:82px"><label class="fld">크기 %</label><input id="s-logosize" class="inp" type="number" value="15" min="6" max="40"></div>
@@ -488,7 +496,7 @@ async function storeDel(s,id){if(cloudOn()&&CLOUD_STORES.includes(s)){await supa
 async function toBlob(du){if(/^data:/.test(du))return dataUrlToBlob(du);const r=await fetch(du);return await r.blob();}
 
 /* ---------- defaults ---------- */
-const DNA_DEFAULT=`Premium Italian down outerwear house. Lightweight yet dimensional construction; sophisticated nylon surface with a subtle glossy or silky finish. Refined rather than sporty quilting; clean high-density stitching; premium volume control; modern feminine silhouette with controlled waist definition when appropriate. Avoid cheap flat quilting, avoid overly tactical outdoor appearance, avoid generic mass-market proportions. QUILTING RULE: diamond quilting must read clean, symmetrical and softly dimensional with consistent stitch tension and premium loft. LOGO RULE: use a small, refined DUVETICA logo treatment; never oversized or visually dominant.`;
+const DNA_DEFAULT=`Premium Italian down outerwear house. Lightweight yet dimensional construction; sophisticated nylon surface with a subtle glossy or silky finish. Refined rather than sporty quilting; clean high-density stitching; premium volume control; modern feminine silhouette with controlled waist definition when appropriate. Avoid cheap flat quilting, avoid overly tactical outdoor appearance, avoid generic mass-market proportions. QUILTING RULE: diamond quilting must read clean, symmetrical and softly dimensional with consistent stitch tension and premium loft. LOGO RULE: do NOT draw any brand logo, patch, label or lettering on the garment — the surface stays completely blank and unbranded; the DUVETICA logo is added later in post-production.`;
 const BASE_MODEL_DEFAULT=`Beautiful young adult Korean female K-pop idol, unmistakably Korean features: small refined oval face, soft V-line jaw, clear luminous skin, natural glossy hair. Minimal clean white studio background, full-length editorial lookbook lighting, wearing a Duvetica-inspired premium piece.`;
 
 /* ---------- category model ---------- */
@@ -536,6 +544,7 @@ const state={
   brief:{keep:new Set(),replace:new Set(),adopt:new Set(),fabricType:''},
   aiAttrs:{}, jsonDirty:false, galFilter:'all',
   libFilter:{lines:{gender:'ALL',gcat:'ALL',season:'ALL'},refs:{gender:'ALL',gcat:'ALL',season:'ALL'}},
+  libSelMode:{lines:false,refs:false}, libSel:{lines:new Set(),refs:new Set()},
   salesMap:{}, salesRaw:''
 };
 
@@ -679,7 +688,7 @@ function jsonToPrompt(J,plan){
   if(md.length)S.push(`MATERIAL — ${md.join('; ')}.`);
   if(J.design_balance!=null)S.push(`DESIGN BALANCE — ${balanceText(J.design_balance*100)}`);
   const b=J.branding||{};
-  S.push(`BRANDING — ${b.logo||'small refined DUVETICA logo'}, ${b.logo_position||'upper left chest'}, ${b.logo_scale||'subtle'}; render only a small subtle brand tab, do NOT render large or legible logo text.`);
+  S.push(`BRANDING — the garment surface must be COMPLETELY BLANK: no brand logo, no lettering, no woven label, no rubber patch, no emblem anywhere on the chest, sleeve, hood or body. Do NOT render any "DUVETICA" text or any logo-like mark. The brand logo is composited separately in post-production, so keep every surface clean and unbranded.`);
   if(J.notes)S.push(`ADDITIONAL — ${J.notes}.`);
   if(rolesText)S.push(`IMAGE ROLES — ${rolesText}.`);
   S.push('Clean studio lighting, neutral seamless background, photorealistic, editorial luxury quality, sharp premium detail.');
@@ -749,7 +758,7 @@ function applyLogo(du){return new Promise(res=>{
   base.onload=()=>{
     const c=document.createElement('canvas');c.width=base.width;c.height=base.height;const ctx=c.getContext('2d');ctx.drawImage(base,0,0);
     const W=c.width,H=c.height,pad=Math.round(W*0.045);
-    const place=(w,h)=>{const p=st.logoPos;return p==='bl'?[pad,H-h-pad]:p==='br'?[W-w-pad,H-h-pad]:p==='tl'?[pad,pad]:[(W-w)/2,H-h-pad];};
+    const place=(w,h)=>{const p=st.logoPos;return p==='bl'?[pad,H-h-pad]:p==='br'?[W-w-pad,H-h-pad]:p==='tl'?[pad,pad]:p==='lc'?[Math.round(W*0.20),Math.round(H*0.20)]:p==='rc'?[Math.round(W-w-W*0.20),Math.round(H*0.20)]:[(W-w)/2,H-h-pad];};
     const done=()=>res(c.toDataURL('image/png'));
     if(st.logoDataUrl){const lg=new Image();lg.onload=()=>{const w=Math.round(W*(st.logoSize/100));const h=Math.round(w*(lg.height/lg.width));const[x,y]=place(w,h);ctx.globalAlpha=.95;ctx.drawImage(lg,x,y,w,h);ctx.globalAlpha=1;done();};lg.onerror=done;lg.src=st.logoDataUrl;}
     else{const fs=Math.round(W*(st.logoSize/100)*0.34);ctx.font=`400 ${fs}px Georgia,'Times New Roman',serif`;ctx.textBaseline='alphabetic';const txt='DUVETICA',ls=fs*0.34;const ws=[...txt].map(ch=>ctx.measureText(ch).width+ls);const tw=ws.reduce((a,b)=>a+b,0)-ls;const[x,y]=place(tw,fs);ctx.fillStyle=st.logoColor==='light'?'rgba(255,255,255,.95)':'rgba(20,19,12,.9)';ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=W*0.006;let cx=x;for(let i=0;i<txt.length;i++){ctx.fillText(txt[i],cx,y+fs);cx+=ws[i];}ctx.shadowBlur=0;done();}
@@ -764,19 +773,42 @@ function metaLine(store,it){
   if(store==='fabrics')return it.ftype||'원단';
   return '기본모델';
 }
+function optionsHTML(opts,cur){return['<option value="">— </option>',...opts.map(o=>`<option ${cur===o?'selected':''}>${o}</option>`)].join('');}
+function renderBulkBar(store){
+  const bar=document.querySelector('.bulkbar[data-store="'+store+'"]');if(!bar)return;
+  const seasons=SEASONS;const sel=state.libSelMode[store];const n=state.libSel[store].size;
+  bar.innerHTML=`<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+    <span class="chiplabel" style="width:auto">업로드/일괄 지정</span>
+    <select id="pu-${store}-gender" class="inp sm">${optionsHTML(GENDER_OPTS,'')}</select>
+    <select id="pu-${store}-gcat" class="inp sm">${optionsHTML(GCAT_OPTS,'')}</select>
+    <select id="pu-${store}-season" class="inp sm">${optionsHTML(seasons,'')}</select>
+    <button class="btn xs ${sel?'primary':''}" data-selmode="${store}">${sel?'선택 완료':'선택 모드'}</button>
+    ${sel?`<button class="btn xs" data-selall="${store}">전체선택</button><button class="btn xs" data-selclear="${store}">해제</button><button class="btn xs primary" data-selapply="${store}">선택 ${n}개에 적용</button>`:''}
+  </div><div class="hint" style="margin-top:4px">위 성별·카테고리·시즌을 정하면 <b>새로 올리는 이미지</b>에 그대로 적용됩니다(빈 칸은 파일명 자동인식). ‘선택 모드’로 <b>기존 항목</b>을 골라 일괄 지정도 가능해요.</div>`;
+}
 function libGrid(store){
   const grid=$('#grid-'+store),sw=store==='fabrics'?'sw':'';
   let items=state[store].slice().sort((a,b)=>b.createdAt-a.createdAt); // 최신순
   const filtered=store==='lines'||store==='refs';
-  if(filtered){renderLibChips(store);items=items.filter(it=>matchFilter(store,it));}
+  if(filtered){renderLibChips(store);renderBulkBar(store);items=items.filter(it=>matchFilter(store,it));}
   if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">${filtered&&hasActiveFilter(store)?'해당 조건의 항목이 없습니다.':'아직 없습니다. 위에서 올려주세요.'}</div>`;return;}
+  const selMode=filtered&&state.libSelMode[store];
   grid.innerHTML=items.map(it=>{
     const sales=store==='lines'?salesFor(it):[];
     const _b=sales.filter(s=>s.rank<=10).map(s=>`<span class="rankbadge ${s.half==='SS'?'ss':'fw'}">${s.half} #${s.rank}</span>`).join('');
     const rb=_b?`<div class="rankbadges">${_b}</div>`:'';
     const sa=sales.length?`<div class="salerow">`+sales.map(s=>`<span class="saleamt ${s.rank<=10?(s.half==='SS'?'ss':'fw'):'dim'}">${esc(s.season)} ${esc(s.amtStr)}</span>`).join('')+`</div>`:'';
-    return`<div class="card ${sw}" data-id="${it.id}" data-store="${store}">${rb}<button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
+    const on=selMode&&state.libSel[store].has(it.id);
+    const selbox=selMode?`<span class="selbox ${on?'on':''}">${on?'✓':''}</span>`:'';
+    return`<div class="card ${sw} ${on?'picked':''}" data-id="${it.id}" data-store="${store}">${rb}${selbox}<button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
   }).join('');
+}
+async function bulkApply(store){
+  const g=($('#pu-'+store+'-gender')||{}).value||'',c=($('#pu-'+store+'-gcat')||{}).value||'',s=($('#pu-'+store+'-season')||{}).value||'';
+  if(!g&&!c&&!s){toast('성별·카테고리·시즌 중 하나를 먼저 선택하세요');return;}
+  const ids=[...state.libSel[store]];if(!ids.length){toast('선택된 항목이 없습니다');return;}
+  for(const id of ids){const it=state[store].find(x=>x.id===id);if(!it)continue;if(g)it.gender=g;if(c)it.gcat=c;if(s)it.season=s;await storePut(store,it);}
+  state.libSel[store].clear();libGrid(store);toast(`${ids.length}개 항목에 적용됨`);
 }
 function matchFilter(store,it){const f=state.libFilter[store];if(!f)return true;return(f.gender==='ALL'||it.gender===f.gender)&&(f.gcat==='ALL'||it.gcat===f.gcat)&&(f.season==='ALL'||it.season===f.season);}
 function hasActiveFilter(store){const f=state.libFilter[store];return f&&(f.gender!=='ALL'||f.gcat!=='ALL'||f.season!=='ALL');}
@@ -1095,15 +1127,17 @@ async function handleFiles(files,store){
     toast(`${arr.length}장 갤러리에 추가${parsed?` · ${parsed}장 파일명 자동인식`:''}`);return;
   }
   const arr=[...files].filter(f=>f.type.startsWith('image/'));let parsed=0;
+  const pg=($('#pu-'+store+'-gender')||{}).value||'',pc=($('#pu-'+store+'-gcat')||{}).value||'',ps=($('#pu-'+store+'-season')||{}).value||'';
   for(const f of arr){let du=await fileToDataUrl(f);du=await resizeDataUrl(du,1024);
     const m=parseName(f.name);if(m.ok)parsed++;
-    const it={id:uid(),name:m.name,dataUrl:du,gender:m.gender||'',gcat:m.gcat||'',season:m.season||'',createdAt:Date.now()};
+    const it={id:uid(),name:m.name,dataUrl:du,gender:pg||m.gender||'',gcat:pc||m.gcat||'',season:ps||m.season||'',createdAt:Date.now()};
     if(store==='lines'){it.category='';it.lifestyle='';}
     if(store==='refs'){it.tags=[];}
     if(store==='fabrics')it.ftype='';
     state[store].push(it);await storePut(store,it);}
   libGrid(store);refreshCounts();renderPicks();
-  toast(`${arr.length}장 추가${parsed?` · ${parsed}장 파일명 자동인식`:''}`);
+  const pre=(pg||pc||ps)?` · 지정(${[pg,pc,ps].filter(Boolean).join('/')})`:'';
+  toast(`${arr.length}장 추가${parsed?` · ${parsed}장 자동인식`:''}${pre}`);
 }
 
 /* ---------- settings ---------- */
@@ -1154,7 +1188,11 @@ function wire(){
     const del=e.target.closest('[data-del]');if(del){const st=del.dataset.store;await storeDel(st,del.dataset.del);state[st]=state[st].filter(x=>x.id!==del.dataset.del);libGrid(st);refreshCounts();renderPicks();return;}
     const gd=e.target.closest('[data-galdel]');if(gd){await storeDel('gallery',gd.dataset.galdel);state.gallery=state.gallery.filter(x=>x.id!==gd.dataset.galdel);galleryGrid();compareSelect();return;}
     const card=e.target.closest('#grid-lines .card, #grid-refs .card, #grid-fabrics .card, #grid-models .card');
-    if(card&&!e.target.closest('.x')){openMeta(card.dataset.store,card.dataset.id);return;}
+    if(card&&!e.target.closest('.x')){const st=card.dataset.store;if((st==='lines'||st==='refs')&&state.libSelMode[st]){const set=state.libSel[st];set.has(card.dataset.id)?set.delete(card.dataset.id):set.add(card.dataset.id);libGrid(st);return;}openMeta(st,card.dataset.id);return;}
+    const sm=e.target.closest('[data-selmode]');if(sm){const st=sm.dataset.selmode;state.libSelMode[st]=!state.libSelMode[st];if(!state.libSelMode[st])state.libSel[st].clear();libGrid(st);return;}
+    const sall=e.target.closest('[data-selall]');if(sall){const st=sall.dataset.selall;state[st].filter(it=>matchFilter(st,it)).forEach(it=>state.libSel[st].add(it.id));libGrid(st);return;}
+    const sclr=e.target.closest('[data-selclear]');if(sclr){const st=sclr.dataset.selclear;state.libSel[st].clear();libGrid(st);return;}
+    const sap=e.target.closest('[data-selapply]');if(sap){await bulkApply(sap.dataset.selapply);return;}
     const gcard=e.target.closest('#grid-gallery .card');if(gcard&&!e.target.closest('.x')){openEdit(gcard.dataset.gid);return;}
     const filt=e.target.closest('[data-filter]');if(filt){state.galFilter=filt.dataset.filter;galleryGrid();return;}
     const lc=e.target.closest('[data-libstore]');if(lc){state.libFilter[lc.dataset.libstore][lc.dataset.axis]=lc.dataset.val;libGrid(lc.dataset.libstore);return;}
