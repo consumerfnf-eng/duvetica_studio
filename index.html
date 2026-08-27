@@ -182,9 +182,31 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 .acard .tg{font-size:10px;color:var(--ink-45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .acard .pick{position:absolute;top:8px;left:8px;width:20px;height:20px;border-radius:50%;background:var(--pine);color:#fff;display:none;align-items:center;justify-content:center;font-size:11px}
 .acard.sel .pick{display:flex}
+/* auth gate */
+.authgate{position:fixed;inset:0;z-index:200;background:var(--paper);display:none;align-items:center;justify-content:center;padding:20px}
+.authgate.on{display:flex}
+.authcard{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:30px 28px;box-shadow:var(--shadow)}
+.authcard .wordmark{font-family:var(--serif);font-weight:400;letter-spacing:.42em;font-size:18px;text-transform:uppercase;text-align:center;display:block}
+.authcard .wordmark small{display:block;letter-spacing:.28em;font-size:9px;color:var(--ink-45);margin-top:4px}
+.authsub{font-size:12.5px;color:var(--ink-70);text-align:center;margin:14px 0 22px;line-height:1.5}
+.authmsg{font-size:12px;color:var(--alert);margin-top:12px;min-height:16px;text-align:center}
+.authhint{font-size:11px;color:var(--ink-45);margin-top:18px;text-align:center;line-height:1.55}
 </style>
 </head>
 <body>
+<div id="authgate" class="authgate">
+  <div class="authcard">
+    <span class="wordmark">Duvetica<small>AI Image Design Studio</small></span>
+    <div class="authsub">회사 공용 스튜디오입니다.<br>승인된 계정만 접근할 수 있습니다.</div>
+    <label class="fld">이메일</label>
+    <input id="auth-email" class="inp" type="email" placeholder="you@company.com" autocomplete="username">
+    <label class="fld" style="margin-top:12px">비밀번호</label>
+    <input id="auth-pw" class="inp" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn primary" id="auth-login" style="width:100%;justify-content:center;margin-top:16px">로그인</button>
+    <div class="authmsg" id="auth-msg"></div>
+    <div class="authhint">계정 발급은 관리자에게 요청하세요.<br>OpenAI 키는 로그인 후 설정에서 각자 입력합니다.</div>
+  </div>
+</div>
 <header>
   <div class="bar">
     <div class="wordmark">Duvetica<small>AI Image Design Studio</small></div>
@@ -263,7 +285,10 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
               <select id="model-source" class="inp" style="margin-bottom:6px"><option value="idol">기본 아이돌 프롬프트</option><option value="preserve">베이스 라인 모델 유지</option></select>
               <div class="hint" style="margin:0 0 8px">아래에서 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
               <div id="pick-models" class="cards"></div></div>
-            <div><div class="sectlabel">4 · SHELL 원단 (선택)</div><div id="pick-fabrics" class="cards"></div></div>
+            <div><div class="sectlabel">4 · SHELL 원단 (선택)</div><div id="pick-fabrics" class="cards"></div>
+              <button class="btn sm" id="btn-fabric-analyze" style="margin-top:8px" title="선택한 원단 스와치를 비전 모델이 읽어 색·조직·광택을 텍스트로 변환해 반영">AI 원단 분석</button>
+              <div class="hint" id="fabric-ai-hint" style="margin:6px 0 0">원단 이미지만으론 약하게 반영돼요. 스와치를 셀렉하면 원단타입 텍스트가 자동 반영되고, 'AI 원단 분석'을 누르면 색·조직·광택까지 텍스트로 강하게 반영됩니다.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -403,6 +428,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <label class="fld" style="margin-top:12px">anon public key</label>
       <input id="s-supakey" class="inp" type="password" placeholder="eyJhbGciOi...">
       <div class="row" style="margin-top:12px"><button class="btn sm" id="btn-cloudtest">연결 테스트</button><button class="btn sm" id="btn-cloudmigrate">로컬 데이터 → 클라우드 업로드</button></div>
+      <div class="divider"></div>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="hint" id="auth-who" style="margin:0">—</div>
+        <button class="btn sm" id="btn-logout" style="display:none">로그아웃</button>
+      </div>
+      <div class="hint" style="margin-top:6px">접근 권한은 Supabase <b>Authentication</b>에서 계정을 만든 사람에게만 부여됩니다. 새 계정 자가가입(Sign up)은 꺼두세요.</div>
     </div>
     <div class="panel" style="margin-top:16px">
       <div class="sectlabel">판매 랭킹 · 라이브러리 카드에 표시</div>
@@ -471,17 +502,17 @@ const SUPABASE_BUCKET='duvetica-studio';
 const CLOUD_STORES=['lines','refs','models','fabrics','gallery','sales']; // settings는 개인 로컬 유지
 function supaCfg(){return{url:(SUPABASE_URL||state.settings.supaUrl||'').replace(/\/$/,''),key:SUPABASE_ANON_KEY||state.settings.supaKey||'',bucket:SUPABASE_BUCKET||state.settings.supaBucket||'duvetica-studio'};}
 function cloudOn(){const c=supaCfg();return!!(c.url&&c.key);}
-async function supaSelect(table){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${c.key}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
-async function supaUpsert(table,row){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=id`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
+async function supaSelect(table){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
+async function supaUpsert(table,row){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=id`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
 /* upsert가 막히는 프로젝트를 위한 확실한 저장: 기존 id 삭제 후 삽입 */
 async function supaPutRow(table,row){
-  const c=supaCfg();
-  try{await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(row.id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,Prefer:'return=minimal'}});}catch(e){}
-  const r=await fetch(`${c.url}/rest/v1/${table}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});
+  await ensureAuth();const c=supaCfg();
+  try{await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(row.id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,Prefer:'return=minimal'}});}catch(e){}
+  const r=await fetch(`${c.url}/rest/v1/${table}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(row)});
   if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);
 }
-async function supaDelete(table,id){const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,Prefer:'return=minimal'}});if(!r.ok)throw new Error(`delete ${table} ${r.status}`);}
-async function supaUpload(path,blob){const c=supaCfg();const r=await fetch(`${c.url}/storage/v1/object/${c.bucket}/${path}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${c.key}`,'Content-Type':blob.type||'image/png','x-upsert':'true'},body:blob});if(!r.ok)throw new Error(`upload ${r.status} ${await r.text()}`);return `${c.url}/storage/v1/object/public/${c.bucket}/${path}`;}
+async function supaDelete(table,id){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,Prefer:'return=minimal'}});if(!r.ok)throw new Error(`delete ${table} ${r.status}`);}
+async function supaUpload(path,blob){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/storage/v1/object/${c.bucket}/${path}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,'Content-Type':blob.type||'image/png','x-upsert':'true'},body:blob});if(!r.ok)throw new Error(`upload ${r.status} ${await r.text()}`);return `${c.url}/storage/v1/object/public/${c.bucket}/${path}`;}
 async function uploadImages(store,item){
   const it=Object.assign({},item);
   const up=async(du,tag)=>{if(!du||!/^data:/.test(du))return du;return await supaUpload(`${store}/${item.id}_${tag}.png`,dataUrlToBlob(du));};
@@ -489,6 +520,61 @@ async function uploadImages(store,item){
   if(it.logoUrl)it.logoUrl=await up(it.logoUrl,'logo');
   return it;
 }
+/* ============================================================
+   AUTH (Supabase) — 승인된 계정만 접근
+   관리자가 대시보드(Authentication)에서 계정을 만든 사람만 로그인 가능.
+   OpenAI 키는 로그인과 무관하게 각자 설정에서 입력합니다.
+   ============================================================ */
+let authSession=null; // {access_token, refresh_token, expires_at, user}
+function authToken(){return authSession&&authSession.access_token;}
+function bearer(){return authToken()||supaCfg().key;}
+function saveSession(s){authSession=s;try{localStorage.setItem('duvetica_auth',JSON.stringify(s));}catch(e){}}
+function loadSession(){try{const s=JSON.parse(localStorage.getItem('duvetica_auth')||'null');if(s&&s.access_token)authSession=s;}catch(e){}}
+function clearSession(){authSession=null;try{localStorage.removeItem('duvetica_auth');}catch(e){}}
+async function supaLogin(email,password){
+  const c=supaCfg();
+  const r=await fetch(`${c.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:c.key,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+  const j=await r.json();
+  if(!r.ok)throw new Error(j.error_description||j.msg||j.error||('HTTP '+r.status));
+  saveSession({access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+((j.expires_in||3600)*1000),user:j.user||{email}});
+  return authSession;
+}
+async function supaRefresh(){
+  if(!authSession||!authSession.refresh_token)return false;
+  const c=supaCfg();
+  try{
+    const r=await fetch(`${c.url}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{apikey:c.key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:authSession.refresh_token})});
+    const j=await r.json();if(!r.ok||!j.access_token)throw 0;
+    saveSession({access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Date.now()+((j.expires_in||3600)*1000),user:j.user||authSession.user});
+    return true;
+  }catch(e){clearSession();return false;}
+}
+async function ensureAuth(){
+  if(!authSession)return false;
+  if(Date.now()>authSession.expires_at-60000)return await supaRefresh();
+  return true;
+}
+async function supaLogout(){
+  const c=supaCfg();
+  try{await fetch(`${c.url}/auth/v1/logout`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`}});}catch(e){}
+  clearSession();location.reload();
+}
+function showAuthGate(){$('#authgate').classList.add('on');setTimeout(()=>{const e=$('#auth-email');if(e)e.focus();},60);}
+function hideAuthGate(){$('#authgate').classList.remove('on');}
+async function doLogin(){
+  const email=($('#auth-email').value||'').trim(),pw=$('#auth-pw').value||'';
+  if(!email||!pw){$('#auth-msg').textContent='이메일과 비밀번호를 입력하세요.';return;}
+  const b=$('#auth-login');b.disabled=true;b.textContent='로그인 중…';$('#auth-msg').textContent='';
+  try{await supaLogin(email,pw);hideAuthGate();await afterAuthBoot();}
+  catch(e){$('#auth-msg').textContent='로그인 실패: '+(e.message==='invalid_grant'?'이메일 또는 비밀번호가 올바르지 않습니다.':e.message);}
+  finally{b.disabled=false;b.textContent='로그인';}
+}
+function updateAuthUI(){
+  const who=$('#auth-who'),lo=$('#btn-logout');if(!who)return;
+  if(authToken()&&authSession.user){who.textContent='로그인됨 · '+(authSession.user.email||'');lo.style.display='';}
+  else{who.textContent=cloudOn()?'로그인 안 됨':'로컬 전용(로그인 불필요)';lo.style.display='none';}
+}
+
 /* 라우팅: 클라우드 켜져 있고 대상 스토어면 Supabase, 아니면 로컬(IndexedDB) */
 async function storeAll(s){if(cloudOn()&&CLOUD_STORES.includes(s)){const rows=await supaSelect(s);rows.forEach(v=>putOf(s,v).catch(()=>{}));return rows;}return allOf(s);}
 async function storePut(s,v){if(cloudOn()&&CLOUD_STORES.includes(s)){const up=await uploadImages(s,v);await supaUpsert(s,{id:up.id,data:up});Object.assign(v,up);putOf(s,up).catch(()=>{});return up;}return putOf(s,v);}
@@ -592,7 +678,7 @@ function computePlan(){
   const detailRole=`DETAIL / hardware reference — reproduce ONLY this DUVETICA branded detail (logo drawcord/string, waist belt with engraved buckle, or branded zipper pull) on the garment; do NOT treat it as the overall ${noun} shape`;
   const roleFor=r=>r.detail?detailRole:designRole;
   const pushList=arr=>arr.forEach(r=>{images.push(r.dataUrl);roles.push(roleFor(r));});
-  const pushShell=()=>{if(shell){images.push(shell.dataUrl);roles.push('fabric shell swatch — apply this material surface, weave and sheen to the garment shell');}};
+  const pushShell=()=>{if(shell){images.push(shell.dataUrl);roles.push('FINAL image = flat FABRIC SWATCH (material sample, not a garment) — replicate its colour, weave, texture and sheen across the whole garment shell; never copy its shape');}};
   const designRefs=refs.filter(r=>!r.detail);
   let refLed=false;
   if(modelMode==='image'){
@@ -628,7 +714,16 @@ function buildDesignJSON(){
   g.material.semi_sheer=+$('#sheer').value/100;
   g.material.shimmer=+$('#shimmer').value/100;
   g.material.shell_ref=!!plan.shell;
+  // 스와치 → 텍스트 브릿지: 원단을 셀렉하면 그 스와치의 원단타입/AI분석 텍스트를 소재 설명에 함께 실어
+  // (이미지만으론 약해서 TEXT보다 못하던 문제 해결) 우선순위: 수동 FABRIC 칩 > 스와치 ftype > AI 원단분석
+  const fabAI=state.aiAttrs.fabric||{};
   if(state.brief.fabricType)g.material.fabric_type=state.brief.fabricType;
+  else if(plan.shell&&plan.shell.ftype)g.material.fabric_type=plan.shell.ftype;
+  else if(fabAI.fabric_type)g.material.fabric_type=fabAI.fabric_type;
+  if(!g.material.surface&&fabAI.surface)g.material.surface=fabAI.surface;
+  if(!g.material.finish&&fabAI.finish)g.material.finish=fabAI.finish;
+  if(fabAI.color)g.material.shell_color=fabAI.color;
+  if(plan.shell)g.material.shell_name=plan.shell.ftype||fabAI.fabric_type||'';
   return{
     target_season:target, source_season:source,
     category:{parent,sub,noun:C.noun},
@@ -682,10 +777,14 @@ function jsonToPrompt(J,plan){
   if(m.fabric_type)md.push(`${m.fabric_type} shell`);
   if(m.surface)md.push(m.surface);
   if(m.finish)md.push(m.finish);
-  if(m.shell_ref)md.push('match the surface, weave and sheen of the provided fabric shell swatch');
+  if(m.shell_color)md.push(`${m.shell_color} colourway`);
   if(m.semi_sheer!=null)md.push(`semi-sheer ${Math.round(m.semi_sheer*100)}% (${sheerText(m.semi_sheer*100)})`);
   if(m.shimmer!=null)md.push(shimmerText(m.shimmer*100));
   if(md.length)S.push(`MATERIAL — ${md.join('; ')}.`);
+  if(m.shell_ref){
+    const nm=m.shell_name?` (${m.shell_name})`:'';
+    S.push(`FABRIC SWATCH${nm} — the FINAL image is a flat fabric swatch, a material sample and NOT a garment. Reproduce its exact colour, weave, texture and surface sheen across the ENTIRE ${noun} shell so the fabric reads identical to the swatch. Apply it as the overall material — do not paste the swatch as a panel, pocket or patch, and do not copy any shape from it.`);
+  }
   if(J.design_balance!=null)S.push(`DESIGN BALANCE — ${balanceText(J.design_balance*100)}`);
   const b=J.branding||{};
   S.push(`BRANDING — the garment surface must be COMPLETELY BLANK: no brand logo, no lettering, no woven label, no rubber patch, no emblem anywhere on the chest, sleeve, hood or body. Do NOT render any "DUVETICA" text or any logo-like mark. The brand logo is composited separately in post-production, so keep every surface clean and unbranded.`);
@@ -728,6 +827,20 @@ async function analyzeRefs(){
     const obj=JSON.parse(txt.slice(txt.indexOf('{'),txt.lastIndexOf('}')+1));
     state.aiAttrs.garment=obj;state.jsonDirty=false;refreshJSON(true);toast('레퍼런스 분석 완료 · JSON 반영');
   }catch(e){toast('분석 실패: '+e.message);}finally{btn.disabled=false;btn.textContent='AI 분석';}
+}
+async function analyzeFabric(){
+  const shell=state.fabrics.find(f=>f.id===state.pick.fabric);
+  if(!shell){toast('먼저 SHELL 원단을 선택하세요.');return;}
+  const btn=$('#btn-fabric-analyze');btn.disabled=true;btn.textContent='분석 중…';
+  try{
+    const content=[{type:'text',text:'이 이미지는 옷 겉감 원단 스와치(직물 샘플)야. 아래 스키마의 순수 JSON 하나만 출력해 — 설명·마크다운·코드펜스 금지. {"fabric_type":"예: glossy nylon / matte taffeta / wool blend / velvet","surface":"짜임·조직 묘사(영문 구, 예: tight ripstop weave, brushed twill)","finish":"광택·마감 묘사(영문 구, 예: soft satin sheen, matte)","color":"주요 색(영문)"} 확실치 않은 값은 빈 문자열.'},{type:'image_url',image_url:{url:shell.dataUrl}}];
+    let txt=await openaiVision([{role:'user',content}]);
+    txt=txt.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const obj=JSON.parse(txt.slice(txt.indexOf('{'),txt.lastIndexOf('}')+1));
+    state.aiAttrs.fabric=obj;state.jsonDirty=false;refreshJSON(true);
+    $('#fabric-ai-hint').textContent='분석 반영됨 · '+[obj.fabric_type,obj.surface,obj.finish,obj.color].filter(Boolean).join(' / ');
+    toast('원단 분석 완료 · 소재 텍스트로 반영');
+  }catch(e){toast('원단 분석 실패: '+e.message);}finally{btn.disabled=false;btn.textContent='AI 원단 분석';}
 }
 
 /* ---------- generate ---------- */
@@ -1146,7 +1259,7 @@ function loadSettingsUI(){const s=state.settings;
   $('#s-logopos').value=s.logoPos;$('#s-logocolor').value=s.logoColor;$('#s-logosize').value=s.logoSize;$('#s-logodefault').checked=s.logoDefault!==false;$('#s-dna').value=s.brandDNA||'';$('#s-basemodel').value=s.baseModelPrompt||'';$('#s-gencount').value=s.genCount||2;$('#gen-n').value=s.genCount||2;
   $('#s-supaurl').value=SUPABASE_URL||s.supaUrl||'';$('#s-supakey').value=SUPABASE_ANON_KEY||s.supaKey||'';$('#s-supabucket').value=SUPABASE_BUCKET||s.supaBucket||'duvetica-studio';
   if(SUPABASE_URL){$('#s-supaurl').disabled=true;$('#s-supakey').placeholder='(배포 상수 사용 중)';}
-  renderCloudStatus();renderLogoPrev();updateKeyDot();const se=$('#s-sales');if(se)se.value=state.salesRaw||'';}
+  renderCloudStatus();renderLogoPrev();updateKeyDot();updateAuthUI();const se=$('#s-sales');if(se)se.value=state.salesRaw||'';}
 function renderCloudStatus(){const el=$('#cloud-status');if(!el)return;const on=cloudOn();el.textContent=on?'클라우드 연결됨':'로컬 전용';el.className='chip'+(on?' pine':'');}
 function renderLogoPrev(){$('#logo-prev').innerHTML=state.settings.logoDataUrl?`<img src="${state.settings.logoDataUrl}" style="max-height:60px;max-width:180px">`:`<span class="hint">이미지 없음 — 워드마크 텍스트로 합성</span>`;}
 function updateKeyDot(){const has=!!state.settings.apiKey;$('#keydot').classList.toggle('ok',has);$('#keylabel').textContent=has?'키 설정됨':'키 미설정';}
@@ -1198,7 +1311,7 @@ function wire(){
     const lc=e.target.closest('[data-libstore]');if(lc){state.libFilter[lc.dataset.libstore][lc.dataset.axis]=lc.dataset.val;libGrid(lc.dataset.libstore);return;}
     const arch=e.target.closest('[data-arch]');if(arch){openArchive(arch.dataset.arch);return;}
     const un=e.target.closest('[data-unpick]');if(un){const st=un.dataset.unpick,id=un.dataset.uid;if(st==='lines')state.pick.line=null;else state.pick.refs.delete(id);renderPicks();return;}
-    const pk=e.target.closest('[data-pick]');if(pk){const st=pk.dataset.pick,id=pk.dataset.id;if(st==='models')state.pick.model=state.pick.model===id?null:id;else state.pick.fabric=state.pick.fabric===id?null:id;pickGrid(st);refreshJSON();return;}
+    const pk=e.target.closest('[data-pick]');if(pk){const st=pk.dataset.pick,id=pk.dataset.id;if(st==='models')state.pick.model=state.pick.model===id?null:id;else{state.pick.fabric=state.pick.fabric===id?null:id;state.aiAttrs.fabric=null;const fh=$('#fabric-ai-hint');if(fh&&!state.pick.fabric)fh.textContent='원단을 셀렉하면 원단타입 텍스트가 자동 반영되고, \'AI 원단 분석\'으로 색·조직·광택까지 강하게 반영됩니다.';}pickGrid(st);refreshJSON();return;}
     const bp=e.target.closest('[data-pill]');if(bp){const cls=bp.dataset.pill,val=bp.dataset.val;const set=cls==='keep'?state.brief.keep:cls==='rep'?state.brief.replace:state.brief.adopt;set.has(val)?set.delete(val):set.add(val);renderPills();refreshJSON();return;}
     const fp=e.target.closest('[data-fabpill]');if(fp){state.brief.fabricType=state.brief.fabricType===fp.dataset.fabpill?'':fp.dataset.fabpill;renderPills();refreshJSON();return;}
   });
@@ -1214,6 +1327,7 @@ function wire(){
   $('#designjson').addEventListener('input',()=>{state.jsonDirty=true;updatePromptPrev();});
   $('#btn-rebuild').addEventListener('click',()=>{state.jsonDirty=false;refreshJSON(true);toast('브리프로 재생성됨');});
   $('#btn-analyze').addEventListener('click',analyzeRefs);
+  $('#btn-fabric-analyze').addEventListener('click',analyzeFabric);
   $('#btn-gen').addEventListener('click',doGenerate);
   $('#showlogo').addEventListener('change',galleryGrid);
   $('#cmp-select').addEventListener('change',e=>renderCompare(e.target.value));
@@ -1225,6 +1339,10 @@ function wire(){
   $('#btn-cloudmigrate').addEventListener('click',migrateToCloud);
   $('#btn-sales-apply').addEventListener('click',applySales);
   $('#btn-logoclear').addEventListener('click',async()=>{state.settings.logoDataUrl='';await putOf('settings',state.settings);renderLogoPrev();toast('로고 이미지 제거');});
+  $('#auth-login').addEventListener('click',doLogin);
+  $('#auth-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  $('#auth-email').addEventListener('keydown',e=>{if(e.key==='Enter')$('#auth-pw').focus();});
+  const lo=$('#btn-logout');if(lo)lo.addEventListener('click',supaLogout);
   $('#btn-export').addEventListener('click',exportAll);$('#btn-exportds').addEventListener('click',exportDataset);
   $('#btn-import').addEventListener('click',()=>$('#hidden-json').click());
   $('#hidden-json').addEventListener('change',e=>{if(e.target.files[0])importAll(e.target.files[0]);e.target.value='';});
@@ -1240,6 +1358,17 @@ async function boot(){
   if(state.settings.baseModelPrompt==null)state.settings.baseModelPrompt=BASE_MODEL_DEFAULT;
   if(state.settings.genCount==null)state.settings.genCount=2;
   if(state.settings.supaBucket==null)state.settings.supaBucket='duvetica-studio';
+  // 로컬 UI는 로그인 전에 준비 (게이트가 위를 덮음)
+  fillSeasonSelects();wire();applyCategory(true);loadSettingsUI();updateKeyDot();refreshJSON(true);
+  loadSession();
+  // 클라우드(공용) 사용 시 로그인 필수 — 승인된 계정만 데이터 접근
+  if(cloudOn()){
+    const ok=await ensureAuth();
+    if(!ok){showAuthGate();return;} // 로그인 성공 시 afterAuthBoot() 호출
+  }
+  await afterAuthBoot();
+}
+async function afterAuthBoot(){
   if(cloudOn())toast('클라우드(Supabase) 연결됨 · 공용 데이터 로드');
   try{state.lines=await storeAll('lines');state.refs=await storeAll('refs');state.models=await storeAll('models');state.fabrics=await storeAll('fabrics');state.gallery=await storeAll('gallery');}catch(e){toast('클라우드 로드 실패, 로컬 데이터로 표시: '+e.message);state.lines=await allOf('lines');state.refs=await allOf('refs');state.models=await allOf('models');state.fabrics=await allOf('fabrics');state.gallery=await allOf('gallery');}
   try{
@@ -1248,7 +1377,7 @@ async function boot(){
     if(!loaded){try{const d=JSON.parse(localStorage.getItem('duvetica_sales')||'null');if(d){state.salesMap=d.map||{};state.salesRaw=d.raw||'';loaded=true;}}catch(e){}}
     if(!loaded){try{const v=await allOf('sales');const main=(v||[]).find(x=>x.id==='main')||(v||[])[0];if(main){state.salesMap=main.map||{};state.salesRaw=main.raw||'';}}catch(e){}}
   }catch(e){}
-  fillSeasonSelects();wire();applyCategory(true);renderAll();loadSettingsUI();updateKeyDot();refreshJSON(true);
+  renderAll();loadSettingsUI();updateAuthUI();
 }
 boot();
 </script>
