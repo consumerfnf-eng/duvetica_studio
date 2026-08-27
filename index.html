@@ -26,6 +26,7 @@ header{position:sticky;top:0;z-index:50;background:rgba(246,243,236,.9);backdrop
 .bar{max-width:1420px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:24px}
 .wordmark{font-family:var(--serif);font-weight:400;letter-spacing:.42em;font-size:16px;text-transform:uppercase;padding-right:22px;border-right:1px solid var(--line);white-space:nowrap}
 .wordmark small{display:block;letter-spacing:.28em;font-size:9px;color:var(--ink-45);margin-top:3px}
+.wordmark small.team{letter-spacing:.16em;font-size:9px;color:var(--ink-70);margin-top:2px}
 nav{display:flex;gap:2px;flex:1}
 nav button{background:none;border:none;padding:9px 15px;font-size:12.5px;letter-spacing:.04em;color:var(--ink-45);border-radius:7px;transition:.15s}
 nav button:hover{color:var(--ink);background:var(--line-2)}
@@ -196,7 +197,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 <body>
 <div id="authgate" class="authgate">
   <div class="authcard">
-    <span class="wordmark">Duvetica<small>AI Image Design Studio</small></span>
+    <span class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small></span>
     <div class="authsub">회사 공용 스튜디오입니다.<br>승인된 계정만 접근할 수 있습니다.</div>
     <label class="fld">이메일</label>
     <input id="auth-email" class="inp" type="email" placeholder="you@company.com" autocomplete="username">
@@ -204,12 +205,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <input id="auth-pw" class="inp" type="password" placeholder="••••••••" autocomplete="current-password">
     <button class="btn primary" id="auth-login" style="width:100%;justify-content:center;margin-top:16px">로그인</button>
     <div class="authmsg" id="auth-msg"></div>
-    <div class="authhint">계정 발급은 관리자에게 요청하세요.<br>OpenAI 키는 로그인 후 설정에서 각자 입력합니다.</div>
+    <div class="authhint">로그인이 안 되거나 계정(아이디)을 부여받고 싶다면<br><b>소비자전략팀</b>에 연락해 주세요.<br>OpenAI 키는 로그인 후 설정에서 각자 입력합니다.</div>
   </div>
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -515,7 +516,9 @@ async function supaDelete(table,id){await ensureAuth();const c=supaCfg();const r
 async function supaUpload(path,blob){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/storage/v1/object/${c.bucket}/${path}`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,'Content-Type':blob.type||'image/png','x-upsert':'true'},body:blob});if(!r.ok)throw new Error(`upload ${r.status} ${await r.text()}`);return `${c.url}/storage/v1/object/public/${c.bucket}/${path}`;}
 async function uploadImages(store,item){
   const it=Object.assign({},item);
-  const up=async(du,tag)=>{if(!du||!/^data:/.test(du))return du;return await supaUpload(`${store}/${item.id}_${tag}.png`,dataUrlToBlob(du));};
+  // 갤러리는 소유자별 폴더로 분리 저장(gallery/{owner}/...), 공용 스토어는 기존 경로 유지
+  const dir=(store==='gallery'&&(item.owner||ownerId()))?`gallery/${item.owner||ownerId()}`:store;
+  const up=async(du,tag)=>{if(!du||!/^data:/.test(du))return du;return await supaUpload(`${dir}/${item.id}_${tag}.png`,dataUrlToBlob(du));};
   if(it.dataUrl)it.dataUrl=await up(it.dataUrl,'img');
   if(it.logoUrl)it.logoUrl=await up(it.logoUrl,'logo');
   return it;
@@ -527,6 +530,7 @@ async function uploadImages(store,item){
    ============================================================ */
 let authSession=null; // {access_token, refresh_token, expires_at, user}
 function authToken(){return authSession&&authSession.access_token;}
+function ownerId(){return authSession&&authSession.user&&authSession.user.id||null;} // 로그인 사용자 uuid = 갤러리 소유자
 function bearer(){return authToken()||supaCfg().key;}
 function saveSession(s){authSession=s;try{localStorage.setItem('duvetica_auth',JSON.stringify(s));}catch(e){}}
 function loadSession(){try{const s=JSON.parse(localStorage.getItem('duvetica_auth')||'null');if(s&&s.access_token)authSession=s;}catch(e){}}
@@ -576,8 +580,21 @@ function updateAuthUI(){
 }
 
 /* 라우팅: 클라우드 켜져 있고 대상 스토어면 Supabase, 아니면 로컬(IndexedDB) */
-async function storeAll(s){if(cloudOn()&&CLOUD_STORES.includes(s)){const rows=await supaSelect(s);rows.forEach(v=>putOf(s,v).catch(()=>{}));return rows;}return allOf(s);}
-async function storePut(s,v){if(cloudOn()&&CLOUD_STORES.includes(s)){const up=await uploadImages(s,v);await supaUpsert(s,{id:up.id,data:up});Object.assign(v,up);putOf(s,up).catch(()=>{});return up;}return putOf(s,v);}
+/* 갤러리(생성 결과물)만 개인별 분리 — owner=로그인 사용자 uuid. 라인·레퍼런스·원단·모델은 공용 */
+async function storeAll(s){
+  if(cloudOn()&&CLOUD_STORES.includes(s)){
+    let rows=await supaSelect(s);
+    if(s==='gallery'){const me=ownerId();rows=rows.filter(v=>v&&v.owner===me);} // 내 결과물만
+    rows.forEach(v=>putOf(s,v).catch(()=>{}));
+    return rows;
+  }
+  return allOf(s);
+}
+async function storePut(s,v){
+  if(s==='gallery'&&ownerId()&&!v.owner)v.owner=ownerId(); // 저장 시 소유자 각인
+  if(cloudOn()&&CLOUD_STORES.includes(s)){const up=await uploadImages(s,v);await supaUpsert(s,{id:up.id,data:up});Object.assign(v,up);putOf(s,up).catch(()=>{});return up;}
+  return putOf(s,v);
+}
 async function storeDel(s,id){if(cloudOn()&&CLOUD_STORES.includes(s)){await supaDelete(s,id);delOf(s,id).catch(()=>{});return;}return delOf(s,id);}
 async function toBlob(du){if(/^data:/.test(du))return dataUrlToBlob(du);const r=await fetch(du);return await r.blob();}
 
