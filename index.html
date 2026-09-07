@@ -285,8 +285,11 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
           <div id="pick-refs" class="pickbar"></div>
           <div class="grid2" style="gap:18px">
             <div><div class="sectlabel">3 · 모델</div>
-              <select id="model-source" class="inp" style="margin-bottom:6px"><option value="idol">기본 아이돌 프롬프트</option><option value="preserve">베이스 라인 모델 유지</option></select>
-              <div class="hint" style="margin:0 0 8px">아래에서 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
+              <div class="row" style="gap:6px;margin-bottom:6px">
+                <select id="gen-gender" class="inp" style="flex:0 0 40%"><option value="women">여성 (기본)</option><option value="men">남성</option></select>
+                <select id="model-source" class="inp" style="flex:1"><option value="idol">기본 프롬프트</option><option value="preserve">베이스 라인 모델 유지</option></select>
+              </div>
+              <div class="hint" style="margin:0 0 8px">성별을 고르면 그 기본 프롬프트로 모델이 생성됩니다. 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
               <div id="pick-models" class="cards"></div></div>
             <div><div class="sectlabel">4 · SHELL 원단 (선택)</div><div id="pick-fabrics" class="cards"></div>
               <button class="btn sm" id="btn-fabric-analyze" style="margin-top:8px" title="선택한 원단 스와치를 비전 모델이 읽어 색·조직·광택을 텍스트로 변환해 반영">AI 원단 분석</button>
@@ -320,9 +323,11 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 
           <div class="sectlabel" style="margin-top:14px">컬러 주도 / COLOR</div>
           <select id="color-source" class="inp">
-            <option value="ref">레퍼런스 컬러 사용</option>
-            <option value="base">듀베티카 라인 컬러 유지</option>
-            <option value="new">NEW 컬러 제안</option>
+            <option value="ref">레퍼런스 컬러 그대로</option>
+            <option value="ref_like">레퍼런스 유사 컬러</option>
+            <option value="new">NEW 컬러</option>
+            <option value="duv_like">듀베티카 유사 컬러</option>
+            <option value="duv">듀베티카 컬러 그대로</option>
           </select>
           <input id="color-new" class="inp" style="margin-top:6px;display:none" placeholder="원하는 새 컬러 (예: 딥 버건디, 아이보리/크림) · 비우면 AI가 시즌 컬러 제안">
           <div class="hint" id="color-hint" style="margin:6px 0 0"></div>
@@ -699,7 +704,9 @@ function refmixHint(v){v=+v;return v<20?'레퍼런스1 강하게':v<45?'레퍼�
 function updateColorUI(){
   const src=($('#color-source')&&$('#color-source').value)||'ref';
   const nw=$('#color-new');if(nw)nw.style.display=src==='new'?'':'none';
-  const h=$('#color-hint');if(h)h.textContent=src==='base'?'베이스 라인 자체 컬러 유지 · 레퍼런스는 형태/디테일만':src==='new'?'새 컬러로 리컬러 · 베이스·레퍼런스 컬러 무시':'레퍼런스 이미지의 컬러를 반영'+((state.pick.refs&&state.pick.refs.size>=2)?' (1·2 기울기 슬라이더 적용)':'');
+  const refN=(state.pick.refs&&state.pick.refs.size>=2)?' (1·2 기울기 적용)':'';
+  const map={ref:'레퍼런스 컬러를 그대로 반영'+refN,ref_like:'레퍼런스와 유사한 톤으로 재해석'+refN,new:'새 컬러로 리컬러 · 베이스·레퍼런스 컬러 무시',duv_like:'듀베티카 베이스 컬러 계열의 유사 톤',duv:'듀베티카 베이스 컬러 그대로 · 레퍼런스는 형태/디테일만'};
+  const h=$('#color-hint');if(h)h.textContent=map[src]||'';
 }
 function adoptClauses(J,noun){
   const a=J.adopt_from_ref||[],out=[];
@@ -714,8 +721,11 @@ function volumeText(v){v=+v;return v<18?'minimal down fill, slim low-loft silhou
 function volumeHint(v){v=+v;return v<18?'슬림·경량':v<42?'로우로프트':v<68?'미드로프트':v<86?'하이로프트':'맥시멀 볼륨';}
 
 /* ---------- plan (images + roles) ---------- */
-// 남자 컨텍스트 판정: 선택 모델의 성별/이름(men·male·남) → 없으면 베이스 라인 성별
+// 남자 컨텍스트 판정: ①성별 셀렉 우선 → ②선택 모델 성별/이름 → ③베이스 라인 성별, 기본 여성
 function isMaleCtx(){
+  const gsel=($('#gen-gender')&&$('#gen-gender').value)||'';
+  if(gsel==='men')return true;
+  if(gsel==='women')return false;
   const m=state.models.find(x=>x.id===state.pick.model);
   if(m){const g=(m.gender||'').toUpperCase(),nm=(m.name||'').toLowerCase();
     if(g==='MEN'||/(^|[^a-z])(men|male|man)([^a-z]|$)/.test(nm)||/남/.test(nm))return true;
@@ -855,17 +865,21 @@ function jsonToPrompt(J,plan){
     const mixTxt=rm<20?'weight reference 1 strongly; reference 2 only as a minor accent':rm<45?'favour reference 1; use reference 2 for secondary details':rm<=55?'blend reference 1 and reference 2 evenly':rm<80?'favour reference 2; use reference 1 for secondary details':'weight reference 2 strongly; reference 1 only as a minor accent';
     S.push(`REFERENCE MIX — when combining the two design references, ${mixTxt}.`);
   }
-  // 컬러 주도: 레퍼런스 / 듀베티카 라인 / NEW 제안
+  // 컬러 주도: 레퍼런스 그대로 / 레퍼런스 유사 / NEW / 듀베티카 유사 / 듀베티카 그대로
   const col=J.color||{};
-  if(col.source==='base'){
-    S.push(`COLOUR — keep the colourway of the DUVETICA base garment (its own colours). Use the reference image(s) for shape, silhouette and detailing ONLY — do NOT take any colour from the references. Ignore this rule only where a FABRIC SWATCH is provided (the swatch defines the material colour).`);
+  const which=(J.ref_mix!=null)?' following the REFERENCE MIX weighting above':'';
+  if(col.source==='duv'){
+    S.push(`COLOUR — keep the EXACT colourway of the DUVETICA base garment (its own colours, unchanged). Use the reference image(s) for shape, silhouette and detailing ONLY — take no colour from them. (A FABRIC SWATCH, if provided, defines the material colour and overrides this.)`);
+  }else if(col.source==='duv_like'){
+    S.push(`COLOUR — stay within the DUVETICA base garment's colour family: use similar, harmonising tones (a refined variation of the base hue), not an exact copy and NOT the reference colours. Keep it a premium DUVETICA palette.`);
   }else if(col.source==='new'){
     S.push(col.new_text
       ? `COLOUR — apply a NEW colourway: ${col.new_text}. Recolour the whole garment shell to this; do not copy colours from the base garment or the references (use them for shape/detail only). Keep it a refined premium DUVETICA tone.`
       : `COLOUR — propose a NEW premium seasonal colourway that fits DUVETICA for ${J.target_season||'the season'} (a fresh, elevated, on-trend tone). Do not copy colours from the base garment or the references; use those only for shape and detailing.`);
-  }else{ // ref (기본)
-    const which=(J.ref_mix!=null)?' following the REFERENCE MIX weighting above':'';
-    S.push(`COLOUR — derive the garment colourway from the reference image(s)${which}. Match their hues and tonal balance on the new ${noun}.`);
+  }else if(col.source==='ref_like'){
+    S.push(`COLOUR — take inspiration from the reference image(s)' colours${which}, but use a similar / harmonising interpretation (close tones, not an exact match) refined into a premium DUVETICA palette.`);
+  }else{ // ref (그대로, 기본)
+    S.push(`COLOUR — derive the garment colourway directly from the reference image(s)${which}. Match their exact hues and tonal balance on the new ${noun}.`);
   }
   const b=J.branding||{};
   if(b.logo_on){
@@ -1462,6 +1476,7 @@ function wire(){
   $('#cat-parent').addEventListener('change',()=>applyCategory(true));
   $('#cat-sub').addEventListener('change',()=>refreshJSON());
   $('#model-source').addEventListener('change',()=>updatePromptPrev());
+  $('#gen-gender').addEventListener('change',()=>updatePromptPrev());
   $('#extra').addEventListener('input',()=>refreshJSON());
   $('#logo-generate').addEventListener('change',()=>refreshJSON(true));
   $('#designjson').addEventListener('input',()=>{state.jsonDirty=true;updatePromptPrev();});
