@@ -321,14 +321,11 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
             <div class="row" style="justify-content:space-between;margin-top:3px"><span class="slider-hint" style="margin:0">◀ 레퍼런스 1</span><span class="slider-hint" id="refmix-h" style="margin:0;color:var(--pine);font-weight:600"></span><span class="slider-hint" style="margin:0">레퍼런스 2 ▶</span></div>
           </div>
 
-          <div class="sectlabel" style="margin-top:14px">컬러 주도 / COLOR</div>
-          <select id="color-source" class="inp">
-            <option value="ref">레퍼런스 컬러 그대로</option>
-            <option value="ref_like">레퍼런스 유사 컬러</option>
-            <option value="new">NEW 컬러</option>
-            <option value="duv_like">듀베티카 유사 컬러</option>
-            <option value="duv">듀베티카 컬러 그대로</option>
-          </select>
+          <div class="slider-wrap" style="margin-top:14px">
+            <div class="slider-head"><span class="lab">컬러 주도 / COLOR</span><span class="val" id="color-v">100</span></div>
+            <input type="range" id="color-bal" min="0" max="100" value="100">
+            <div class="row" style="justify-content:space-between;margin-top:3px"><span class="slider-hint" style="margin:0">◀ 듀베티카 컬러</span><span class="slider-hint" id="color-h" style="margin:0;color:var(--pine);font-weight:600"></span><span class="slider-hint" style="margin:0">레퍼런스 컬러 ▶</span></div>
+          </div>
           <input id="color-new" class="inp" style="margin-top:6px;display:none" placeholder="원하는 새 컬러 (예: 딥 버건디, 아이보리/크림) · 비우면 AI가 시즌 컬러 제안">
           <div class="hint" id="color-hint" style="margin:6px 0 0"></div>
 
@@ -701,12 +698,16 @@ function sheerHint(v){v=+v;return v<12?'불투명':v<38?'부분 시스루':v<68?
 function shimmerHint(v){v=+v;return v<12?'매트':v<38?'새틴 광':v<68?'글로시':'하이글로스';}
 function balanceHint(b){b=+b;return b<20?'원형 강하게 유지':b<45?'라인 우선':b<70?'균형':'레퍼런스 주도';}
 function refmixHint(v){v=+v;return v<20?'레퍼런스1 강하게':v<45?'레퍼런스1 우선':v<=55?'균형':v<80?'레퍼런스2 우선':'레퍼런스2 강하게';}
+// 컬러 슬라이더: 0 듀베티카 그대로 ─ 듀베티카유사 ─ NEW ─ 레퍼런스유사 ─ 100 레퍼런스 그대로
+function colorSrcFromBal(v){v=+v;return v<15?'duv':v<40?'duv_like':v<=60?'new':v<85?'ref_like':'ref';}
+function colorBalHint(v){const s=colorSrcFromBal(v);return{duv:'듀베티카 컬러',duv_like:'듀베티카 유사',new:'NEW 컬러',ref_like:'레퍼런스 유사',ref:'레퍼런스 컬러'}[s];}
 function updateColorUI(){
-  const src=($('#color-source')&&$('#color-source').value)||'ref';
+  const v=$('#color-bal')?+$('#color-bal').value:100,src=colorSrcFromBal(v);
   const nw=$('#color-new');if(nw)nw.style.display=src==='new'?'':'none';
   const refN=(state.pick.refs&&state.pick.refs.size>=2)?' (1·2 기울기 적용)':'';
   const map={ref:'레퍼런스 컬러를 그대로 반영'+refN,ref_like:'레퍼런스와 유사한 톤으로 재해석'+refN,new:'새 컬러로 리컬러 · 베이스·레퍼런스 컬러 무시',duv_like:'듀베티카 베이스 컬러 계열의 유사 톤',duv:'듀베티카 베이스 컬러 그대로 · 레퍼런스는 형태/디테일만'};
   const h=$('#color-hint');if(h)h.textContent=map[src]||'';
+  const ch=$('#color-h');if(ch)ch.textContent=colorBalHint(v);
 }
 function adoptClauses(J,noun){
   const a=J.adopt_from_ref||[],out=[];
@@ -802,7 +803,7 @@ function buildDesignJSON(){
     garment:g,
     design_balance:+$('#balance').value/100,
     ref_mix:(plan.refs&&plan.refs.length>=2)?(+($('#refmix')?$('#refmix').value:50)/100):null,
-    color:{source:($('#color-source')&&$('#color-source').value)||'ref',new_text:($('#color-new')&&$('#color-new').value.trim())||''},
+    color:{source:colorSrcFromBal($('#color-bal')?+$('#color-bal').value:100),new_text:($('#color-new')&&$('#color-new').value.trim())||''},
     branding:{brand:'DUVETICA',logo_on:!!(($('#logo-generate')&&$('#logo-generate').checked)),logo:'authentic DUVETICA pentagonal badge, wearer left chest, tone-on-tone',logo_position:'upper left chest (wearer left)',logo_scale:'small refined 5-6cm'},
     priority:{model:plan.model?'model reference':'base image',garment_structure:'reference image',brand_rules:'DUVETICA DNA'},
     notes:$('#extra').value.trim()
@@ -1469,7 +1470,7 @@ function wire(){
   sync('balance','balance-v','balance-h',balanceHint);sync('sheer','sheer-v','sheer-h',sheerHint);sync('shimmer','shimmer-v','shimmer-h',shimmerHint);
   sync('refmix','refmix-v','refmix-h',refmixHint);
   $('#balance-h').textContent=balanceHint(35);$('#sheer-h').textContent=sheerHint(20);$('#shimmer-h').textContent=shimmerHint(25);$('#refmix-h').textContent=refmixHint(50);
-  $('#color-source').addEventListener('change',()=>{updateColorUI();refreshJSON();});
+  $('#color-bal').addEventListener('input',()=>{$('#color-v').textContent=$('#color-bal').value;updateColorUI();refreshJSON();});
   $('#color-new').addEventListener('input',()=>refreshJSON());
   updateColorUI();
   $('#season').addEventListener('change',renderPicks);
