@@ -312,6 +312,21 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
             <div class="row" style="justify-content:space-between;margin-top:3px"><span class="slider-hint" style="margin:0">◀ 듀베티카 라인</span><span class="slider-hint" id="balance-h" style="margin:0;color:var(--pine);font-weight:600"></span><span class="slider-hint" style="margin:0">레퍼런스 ▶</span></div>
           </div>
 
+          <div id="refmix-wrap" class="slider-wrap" style="display:none">
+            <div class="slider-head"><span class="lab">레퍼런스 1 · 2 기울기</span><span class="val" id="refmix-v">50</span></div>
+            <input type="range" id="refmix" min="0" max="100" value="50">
+            <div class="row" style="justify-content:space-between;margin-top:3px"><span class="slider-hint" style="margin:0">◀ 레퍼런스 1</span><span class="slider-hint" id="refmix-h" style="margin:0;color:var(--pine);font-weight:600"></span><span class="slider-hint" style="margin:0">레퍼런스 2 ▶</span></div>
+          </div>
+
+          <div class="sectlabel" style="margin-top:14px">컬러 주도 / COLOR</div>
+          <select id="color-source" class="inp">
+            <option value="ref">레퍼런스 컬러 사용</option>
+            <option value="base">듀베티카 라인 컬러 유지</option>
+            <option value="new">NEW 컬러 제안</option>
+          </select>
+          <input id="color-new" class="inp" style="margin-top:6px;display:none" placeholder="원하는 새 컬러 (예: 딥 버건디, 아이보리/크림) · 비우면 AI가 시즌 컬러 제안">
+          <div class="hint" id="color-hint" style="margin:6px 0 0"></div>
+
           <div class="sectlabel">소재 / FABRIC</div>
           <div class="pillrow" id="fabric-pills"></div>
           <div class="slider-wrap">
@@ -680,6 +695,12 @@ function balanceText(b){b=+b;return b<20?'Stay very close to the SOURCE garment:
 function sheerHint(v){v=+v;return v<12?'불투명':v<38?'부분 시스루':v<68?'반투명':'강한 시스루';}
 function shimmerHint(v){v=+v;return v<12?'매트':v<38?'새틴 광':v<68?'글로시':'하이글로스';}
 function balanceHint(b){b=+b;return b<20?'원형 강하게 유지':b<45?'라인 우선':b<70?'균형':'레퍼런스 주도';}
+function refmixHint(v){v=+v;return v<20?'레퍼런스1 강하게':v<45?'레퍼런스1 우선':v<=55?'균형':v<80?'레퍼런스2 우선':'레퍼런스2 강하게';}
+function updateColorUI(){
+  const src=($('#color-source')&&$('#color-source').value)||'ref';
+  const nw=$('#color-new');if(nw)nw.style.display=src==='new'?'':'none';
+  const h=$('#color-hint');if(h)h.textContent=src==='base'?'베이스 라인 자체 컬러 유지 · 레퍼런스는 형태/디테일만':src==='new'?'새 컬러로 리컬러 · 베이스·레퍼런스 컬러 무시':'레퍼런스 이미지의 컬러를 반영'+((state.pick.refs&&state.pick.refs.size>=2)?' (1·2 기울기 슬라이더 적용)':'');
+}
 function adoptClauses(J,noun){
   const a=J.adopt_from_ref||[],out=[];
   if(!a.length)return out;
@@ -770,6 +791,8 @@ function buildDesignJSON(){
     keep:[...state.brief.keep], replace:[...state.brief.replace], adopt_from_ref:[...state.brief.adopt],
     garment:g,
     design_balance:+$('#balance').value/100,
+    ref_mix:(plan.refs&&plan.refs.length>=2)?(+($('#refmix')?$('#refmix').value:50)/100):null,
+    color:{source:($('#color-source')&&$('#color-source').value)||'ref',new_text:($('#color-new')&&$('#color-new').value.trim())||''},
     branding:{brand:'DUVETICA',logo_on:!!(($('#logo-generate')&&$('#logo-generate').checked)),logo:'authentic DUVETICA pentagonal badge, wearer left chest, tone-on-tone',logo_position:'upper left chest (wearer left)',logo_scale:'small refined 5-6cm'},
     priority:{model:plan.model?'model reference':'base image',garment_structure:'reference image',brand_rules:'DUVETICA DNA'},
     notes:$('#extra').value.trim()
@@ -826,6 +849,24 @@ function jsonToPrompt(J,plan){
     S.push(`FABRIC SWATCH${nm} — the FINAL image is a flat fabric swatch, a material sample and NOT a garment. Reproduce its exact colour, weave, texture and surface sheen across the ENTIRE ${noun} shell so the fabric reads identical to the swatch. Apply it as the overall material — do not paste the swatch as a panel, pocket or patch, and do not copy any shape from it.`);
   }
   if(J.design_balance!=null)S.push(`DESIGN BALANCE — ${balanceText(J.design_balance*100)}`);
+  // 레퍼런스 1·2 기울기 (레퍼런스 2개 이상일 때)
+  if(J.ref_mix!=null){
+    const rm=J.ref_mix*100;
+    const mixTxt=rm<20?'weight reference 1 strongly; reference 2 only as a minor accent':rm<45?'favour reference 1; use reference 2 for secondary details':rm<=55?'blend reference 1 and reference 2 evenly':rm<80?'favour reference 2; use reference 1 for secondary details':'weight reference 2 strongly; reference 1 only as a minor accent';
+    S.push(`REFERENCE MIX — when combining the two design references, ${mixTxt}.`);
+  }
+  // 컬러 주도: 레퍼런스 / 듀베티카 라인 / NEW 제안
+  const col=J.color||{};
+  if(col.source==='base'){
+    S.push(`COLOUR — keep the colourway of the DUVETICA base garment (its own colours). Use the reference image(s) for shape, silhouette and detailing ONLY — do NOT take any colour from the references. Ignore this rule only where a FABRIC SWATCH is provided (the swatch defines the material colour).`);
+  }else if(col.source==='new'){
+    S.push(col.new_text
+      ? `COLOUR — apply a NEW colourway: ${col.new_text}. Recolour the whole garment shell to this; do not copy colours from the base garment or the references (use them for shape/detail only). Keep it a refined premium DUVETICA tone.`
+      : `COLOUR — propose a NEW premium seasonal colourway that fits DUVETICA for ${J.target_season||'the season'} (a fresh, elevated, on-trend tone). Do not copy colours from the base garment or the references; use those only for shape and detailing.`);
+  }else{ // ref (기본)
+    const which=(J.ref_mix!=null)?' following the REFERENCE MIX weighting above':'';
+    S.push(`COLOUR — derive the garment colourway from the reference image(s)${which}. Match their hues and tonal balance on the new ${noun}.`);
+  }
   const b=J.branding||{};
   if(b.logo_on){
     S.push(LOGO_RULE);
@@ -1003,6 +1044,8 @@ function renderPicks(){
   const src=prevSeason($('#season').value);
   $('#prevlabel').textContent=src?`${src} 라인`:'시즌 확인';
   renderPickBar('lines');renderPickBar('refs');pickGrid('models');pickGrid('fabrics');
+  const rw=$('#refmix-wrap');if(rw)rw.style.display=(state.pick.refs&&state.pick.refs.size>=2)?'':'none';
+  updateColorUI();
   refreshJSON();
 }
 
@@ -1058,7 +1101,9 @@ function openArchive(store){
     const c=e.target.closest('[data-aid]');if(!c)return;const id=c.dataset.aid;
     if(isLines)state.pick.line=state.pick.line===id?null:id;
     else{state.pick.refs.has(id)?state.pick.refs.delete(id):state.pick.refs.add(id);}
-    render();renderPickBar(store);refreshJSON();
+    render();renderPickBar(store);
+    if(store==='refs'){const rw=$('#refmix-wrap');if(rw)rw.style.display=state.pick.refs.size>=2?'':'none';updateColorUI();}
+    refreshJSON();
   });
   $('#arch-done').addEventListener('click',closeModal);
   $('#modal').classList.add('on');
@@ -1408,7 +1453,11 @@ function wire(){
 
   const sync=(id,vid,hid,fn)=>{const el=$('#'+id);el.addEventListener('input',()=>{$('#'+vid).textContent=el.value;if(hid)$('#'+hid).textContent=fn(el.value);refreshJSON();});};
   sync('balance','balance-v','balance-h',balanceHint);sync('sheer','sheer-v','sheer-h',sheerHint);sync('shimmer','shimmer-v','shimmer-h',shimmerHint);
-  $('#balance-h').textContent=balanceHint(35);$('#sheer-h').textContent=sheerHint(20);$('#shimmer-h').textContent=shimmerHint(25);
+  sync('refmix','refmix-v','refmix-h',refmixHint);
+  $('#balance-h').textContent=balanceHint(35);$('#sheer-h').textContent=sheerHint(20);$('#shimmer-h').textContent=shimmerHint(25);$('#refmix-h').textContent=refmixHint(50);
+  $('#color-source').addEventListener('change',()=>{updateColorUI();refreshJSON();});
+  $('#color-new').addEventListener('input',()=>refreshJSON());
+  updateColorUI();
   $('#season').addEventListener('change',renderPicks);
   $('#cat-parent').addEventListener('change',()=>applyCategory(true));
   $('#cat-sub').addEventListener('change',()=>refreshJSON());
