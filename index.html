@@ -289,7 +289,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
                 <select id="gen-gender" class="inp" style="flex:0 0 40%"><option value="women">여성 (기본)</option><option value="men">남성</option></select>
                 <select id="model-source" class="inp" style="flex:1"><option value="idol">기본 프롬프트</option><option value="preserve">베이스 라인 모델 유지</option></select>
               </div>
-              <div class="hint" style="margin:0 0 8px">성별을 고르면 그 기본 프롬프트로 모델이 생성됩니다. 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
+              <div class="hint" id="model-hint" style="margin:0 0 8px">성별을 고르면 그 기본 프롬프트로 모델이 생성됩니다. 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
               <div id="pick-models" class="cards"></div></div>
             <div><div class="sectlabel">4 · SHELL 원단 (선택)</div><div id="pick-fabrics" class="cards"></div>
               <button class="btn sm" id="btn-fabric-analyze" style="margin-top:8px" title="선택한 원단 스와치를 비전 모델이 읽어 색·조직·광택을 텍스트로 변환해 반영">AI 원단 분석</button>
@@ -701,6 +701,12 @@ function refmixHint(v){v=+v;return v<20?'레퍼런스1 강하게':v<45?'레퍼�
 // 컬러 슬라이더: 0 듀베티카 그대로 ─ 듀베티카유사 ─ NEW ─ 레퍼런스유사 ─ 100 레퍼런스 그대로
 function colorSrcFromBal(v){v=+v;return v<15?'duv':v<40?'duv_like':v<=60?'new':v<85?'ref_like':'ref';}
 function colorBalHint(v){const s=colorSrcFromBal(v);return{duv:'듀베티카 컬러',duv_like:'듀베티카 유사',new:'NEW 컬러',ref_like:'레퍼런스 유사',ref:'레퍼런스 컬러'}[s];}
+function updateGenderUI(){
+  const men=($('#gen-gender')&&$('#gen-gender').value)==='men';
+  const h=$('#model-hint');if(h)h.textContent=men
+    ?'남성은 자연스러운 전신 생성을 위해 모델 이미지 대신 남성 기본 프롬프트로 새로 생성됩니다(합성 이질감 방지).'
+    :'성별을 고르면 그 기본 프롬프트로 모델이 생성됩니다. 모델 이미지를 선택하면 그 인물로 대체합니다.';
+}
 function updateColorUI(){
   const v=$('#color-bal')?+$('#color-bal').value:100,src=colorSrcFromBal(v);
   const nw=$('#color-new');if(nw)nw.style.display=src==='new'?'':'none';
@@ -743,7 +749,9 @@ function computePlan(){
   const shell=state.fabrics.find(f=>f.id===state.pick.fabric);
   const noun=CATEGORIES[$('#cat-parent').value].noun;
   const sel=($('#model-source')&&$('#model-source').value)||'idol';
-  const modelMode=model?'image':sel; // image | preserve | idol
+  let modelMode=model?'image':sel; // image | preserve | idol
+  // B안: 남성은 모델 얼굴 합성(image) 대신 남성 프롬프트로 전신을 한 씬으로 새로 생성 → 합성 이질감 제거
+  if(isMaleCtx()&&modelMode==='image')modelMode='idol';
   const bal=+($('#balance')?$('#balance').value:35);
   const images=[],roles=[];
   const designRole=`${noun} reference — adopt its silhouette, neckline, collar and distinctive design for the ${noun}`;
@@ -1472,12 +1480,12 @@ function wire(){
   $('#balance-h').textContent=balanceHint(35);$('#sheer-h').textContent=sheerHint(20);$('#shimmer-h').textContent=shimmerHint(25);$('#refmix-h').textContent=refmixHint(50);
   $('#color-bal').addEventListener('input',()=>{$('#color-v').textContent=$('#color-bal').value;updateColorUI();refreshJSON();});
   $('#color-new').addEventListener('input',()=>refreshJSON());
-  updateColorUI();
+  updateColorUI();updateGenderUI();
   $('#season').addEventListener('change',renderPicks);
   $('#cat-parent').addEventListener('change',()=>applyCategory(true));
   $('#cat-sub').addEventListener('change',()=>refreshJSON());
   $('#model-source').addEventListener('change',()=>updatePromptPrev());
-  $('#gen-gender').addEventListener('change',()=>updatePromptPrev());
+  $('#gen-gender').addEventListener('change',()=>{updateGenderUI();updatePromptPrev();});
   $('#extra').addEventListener('input',()=>refreshJSON());
   $('#logo-generate').addEventListener('change',()=>refreshJSON(true));
   $('#designjson').addEventListener('input',()=>{state.jsonDirty=true;updatePromptPrev();});
