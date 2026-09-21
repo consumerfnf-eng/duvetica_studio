@@ -623,7 +623,12 @@ async function storePut(s,v){
   return putOf(s,v);
 }
 async function storeDel(s,id){if(cloudOn()&&CLOUD_STORES.includes(s)){await supaDelete(s,id);delOf(s,id).catch(()=>{});return;}return delOf(s,id);}
-async function toBlob(du){if(/^data:/.test(du))return dataUrlToBlob(du);const r=await fetch(du);return await r.blob();}
+function imgToBlob(url){return new Promise((res,rej)=>{const im=new Image();im.crossOrigin='anonymous';im.onload=()=>{try{const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);c.toBlob(b=>b?res(b):rej(new Error('blob null')),'image/png');}catch(e){rej(e);}};im.onerror=()=>rej(new Error('img load fail'));im.src=url;});}
+async function toBlob(du){
+  if(/^data:/.test(du))return dataUrlToBlob(du);
+  try{const r=await fetch(du);if(!r.ok)throw new Error('HTTP '+r.status);return await r.blob();}
+  catch(e){try{return await imgToBlob(du);}catch(e2){throw new Error('이미지 불러오기 실패 — 원격 이미지(CORS/네트워크). 클라우드 저장·버킷 공개 여부를 확인하세요.');}}
+}
 
 /* ---------- defaults ---------- */
 const DNA_DEFAULT=`Premium Italian down outerwear house. Lightweight yet dimensional construction; sophisticated nylon surface with a subtle glossy or silky finish. Refined rather than sporty quilting; clean high-density stitching; premium volume control; modern feminine silhouette with controlled waist definition when appropriate. Avoid cheap flat quilting, avoid overly tactical outdoor appearance, avoid generic mass-market proportions. QUILTING RULE: diamond quilting must read clean, symmetrical and softly dimensional with consistent stitch tension and premium loft. LOGO RULE: do NOT draw any brand logo, patch, label or lettering on the garment — the surface stays completely blank and unbranded; the DUVETICA logo is added later in post-production.`;
@@ -1253,7 +1258,7 @@ async function runEdit(kind,opt){
   else prompt=`Keep the garment design, silhouette and model identical. Re-render only the surface finish and padding — fabric sheer: ${sheerText(opt.sheer)}; surface: ${shimmerText(opt.shimmer)}; down fill volume: ${volumeText(opt.volume)}. Keep the original color. Do not render legible logo text.`;
   const prev=$('#edit-prev');prev.innerHTML=`<div class="load"><div class="spinner"></div><span>수정 중…</span></div>`;
   try{
-    const raw=await openaiEdit(prompt,imgs);const logoUrl=state.settings.logoDefault?await applyLogo(raw):raw;const root=editG.parentId||editG.id;
+    const raw=await openaiEdit(prompt,imgs);let logoUrl=raw;if(state.settings.logoDefault){try{logoUrl=await applyLogo(raw);}catch(e){logoUrl=raw;}}const root=editG.parentId||editG.id;
     const ng={id:uid(),name:cur.name+' ·'+(kind==='model'?'M':kind==='cody'?'C':'F'),season:cur.season,dataUrl:raw,logoUrl,
       sourceLineId:cur.sourceLineId,refIds:cur.refIds,modelId:kind==='model'?opt.modelId:cur.modelId,fabricId:cur.fabricId,
       category:cur.category,keep:cur.keep,replace:cur.replace,adopt:cur.adopt,
