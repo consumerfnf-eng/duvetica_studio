@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v7</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v8</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -558,7 +558,20 @@ const SUPABASE_BUCKET='duvetica-studio';
 const CLOUD_STORES=['lines','refs','models','fabrics','gallery','sales']; // settings는 개인 로컬 유지
 function supaCfg(){return{url:(SUPABASE_URL||state.settings.supaUrl||'').replace(/\/$/,''),key:SUPABASE_ANON_KEY||state.settings.supaKey||'',bucket:SUPABASE_BUCKET||state.settings.supaBucket||'duvetica-studio'};}
 function cloudOn(){const c=supaCfg();return!!(c.url&&c.key);}
-async function supaSelect(table){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?select=*`,{headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`}});if(!r.ok)throw new Error(`load ${table} ${r.status}`);return(await r.json()).map(row=>row.data||row);}
+async function supaSelect(table){
+  await ensureAuth();const c=supaCfg();const out=[];const PAGE=1000;let from=0;
+  // Supabase REST는 요청당 최대 1000행 → Range 헤더로 전부 페이지네이션
+  while(true){
+    const r=await fetch(`${c.url}/rest/v1/${table}?select=*&order=id.asc`,{headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,Range:`${from}-${from+PAGE-1}`,'Range-Unit':'items'}});
+    if(!r.ok)throw new Error(`load ${table} ${r.status}`);
+    const chunk=await r.json();
+    out.push(...chunk);
+    if(!Array.isArray(chunk)||chunk.length<PAGE)break;
+    from+=PAGE;
+    if(from>200000)break; // 안전장치
+  }
+  return out.map(row=>row.data||row);
+}
 async function supaUpsert(table,row){await ensureAuth();const c=supaCfg();const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=id`,{method:'POST',headers:{apikey:c.key,Authorization:`Bearer ${bearer()}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});if(!r.ok)throw new Error(`save ${table} ${r.status} ${await r.text()}`);}
 /* upsert가 막히는 프로젝트를 위한 확실한 저장: 기존 id 삭제 후 삽입 */
 async function supaPutRow(table,row){
@@ -1339,7 +1352,7 @@ function galleryGrid(){
   const me=ownerId(),sb=$('#gal-sharebar');
   if(sb){
     if(!state.galSelMode){
-      sb.innerHTML=`<button class="btn sm" data-galselmode>선택</button><span class="hint" style="margin:0">내 생성물을 골라 다른 계정에 공유할 수 있어요</span>`;
+      sb.innerHTML=`<button class="btn sm" data-galselmode>선택</button><button class="btn sm" data-galreload>☁ 다시 불러오기</button><span class="hint" style="margin:0">내 생성물을 골라 다른 계정에 공유할 수 있어요</span>`;
     }else{
       sb.innerHTML=`<button class="btn sm" data-galselnone>선택 해제</button><button class="btn sm primary" data-galshare>↗ 선택 공유 (${state.galSel.size})</button><button class="btn sm" data-galselmode>완료</button><span class="hint" style="margin:0">내가 만든 것만 공유 가능</span>`;
     }
@@ -1694,6 +1707,7 @@ function wire(){
   document.addEventListener('click',async e=>{
     const del=e.target.closest('[data-del]');if(del){const st=del.dataset.store;await storeDel(st,del.dataset.del);state[st]=state[st].filter(x=>x.id!==del.dataset.del);libGrid(st);refreshCounts();renderPicks();return;}
     const gd=e.target.closest('[data-galdel]');if(gd){await storeDel('gallery',gd.dataset.galdel);state.gallery=state.gallery.filter(x=>x.id!==gd.dataset.galdel);galleryGrid();compareSelect();return;}
+    const grl=e.target.closest('[data-galreload]');if(grl){try{toast('갤러리 불러오는 중…');state.gallery=await storeAll('gallery');galleryGrid();compareSelect();toast('갤러리 '+state.gallery.length+'건 불러옴');}catch(err){toast('불러오기 실패: '+err.message);}return;}
     const gsm=e.target.closest('[data-galselmode]');if(gsm){state.galSelMode=!state.galSelMode;if(!state.galSelMode)state.galSel.clear();galleryGrid();return;}
     const gsn=e.target.closest('[data-galselnone]');if(gsn){state.galSel.clear();galleryGrid();return;}
     const gsh=e.target.closest('[data-galshare]');if(gsh){shareGallerySelected();return;}
