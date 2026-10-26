@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v4</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v5</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -677,7 +677,7 @@ const CATEGORIES={
     schema:'{"silhouette":"","neckline":"","collar":"","sleeve":"","length":"","fit":"","cuff":"","hem":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',neckline:'',collar:'',sleeve:'',length:'',fit:'',cuff:'',hem:'',material:matDefault()})},
   BOTTOMS:{noun:'bottoms',
-    subs:['WIDE PANTS','STRAIGHT PANTS','TAPERED PANTS','LEGGINGS','SHORTS','JOGGER','CARGO PANTS'],
+    subs:['WIDE PANTS','STRAIGHT PANTS','TAPERED PANTS','LEGGINGS','MICRO SHORTS','SHORT SHORTS','BERMUDA SHORTS','KNEE SHORTS','JOGGER','CARGO PANTS'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
     replaceDefault:['bottoms'],
     adoptDefault:['silhouette','leg shape','length'],
@@ -887,7 +887,11 @@ function subDirective(parent,sub){
   if(/MINI/.test(s))L.push('MINI length — very short, the hem sits high on the upper thigh, clearly well above the knee and noticeably shorter than mid-thigh');
   if(/MIDI/.test(s))L.push('MIDI length — hem around mid-calf');
   if(/(^|\s)LONG|MAXI|LONG\s/.test(s))L.push('LONG / maxi length — hem at the ankle or floor');
-  if(/SHORTS/.test(s))L.push('short-shorts length — upper-thigh hem');
+  if(/MICRO\s?SHORTS/.test(s))L.push('micro shorts — very short, hem high on the upper thigh (hot-pants length)');
+  else if(/SHORT\s?SHORTS/.test(s))L.push('short shorts — mid-thigh hem');
+  else if(/BERMUDA/.test(s))L.push('bermuda shorts — hem just above the knee');
+  else if(/KNEE\s?SHORTS/.test(s))L.push('knee-length shorts — hem at the knee');
+  else if(/SHORTS/.test(s))L.push('shorts — upper-thigh hem');
   if(/CROP/.test(s))L.push('cropped — ends at or above the waist');
   if(/PLEAT/.test(s))L.push('fully pleated construction with crisp knife pleats');
   if(/A-?LINE/.test(s))L.push('A-line flared silhouette');
@@ -1315,7 +1319,7 @@ function shareGallerySelected(){
 }
 
 /* ---------- compare ---------- */
-function compareSelect(){const sel=$('#cmp-select');const items=state.gallery.filter(g=>g.sourceLineId).sort((a,b)=>b.createdAt-a.createdAt);sel.innerHTML=`<option value="">— 선택 —</option>`+items.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');}
+function compareSelect(){const sel=$('#cmp-select');const items=state.gallery.filter(g=>!g.uploaded&&(g.sourceLineId||(g.refIds&&g.refIds.length))).sort((a,b)=>b.createdAt-a.createdAt);sel.innerHTML=`<option value="">— 선택 —</option>`+items.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');}
 function colorSourceKo(J){const c=(J&&J.color)||{};const map={ref:'레퍼런스 컬러',ref_like:'레퍼런스 유사 컬러',new:'NEW 컬러'+(c.new_text?' ('+c.new_text+')':''),duv_like:'듀베티카 유사 컬러',duv:'듀베티카 컬러'};return map[c.source]||'—';}
 function renderCompare(gid){
   const box=$('#cmp-body');if(!gid){box.innerHTML='';return;}
