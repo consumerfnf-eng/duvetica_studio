@@ -218,7 +218,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v1</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v2</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -812,7 +812,7 @@ function computePlan(){
     if(line){images.push(line.dataUrl);roles.push(`base lookbook — preserve its model, face, hair, pose, background and everything except the ${noun}`);}
     pushList(refs);pushShell();
   }else{ // idol
-    refLed=bal>=60&&designRefs.length>0;
+    refLed=(bal>=60||!line)&&designRefs.length>0; // 라인 없으면 첫 레퍼런스를 PRIMARY 베이스로
     if(refLed){
       const primary=designRefs[0];
       images.push(primary.dataUrl);roles.push(`PRIMARY ${noun} reference — build the garment ON this shape, silhouette and neckline`);
@@ -884,7 +884,8 @@ function jsonToPrompt(J,plan){
   const dna=state.settings.brandDNA?`[DUVETICA DESIGN DNA] ${state.settings.brandDNA.replace(/\s+/g,' ').trim()}`:'';
   S.push(`Full-body premium DUVETICA fashion lookbook photograph for the ${J.target_season||'27FW'} season.`);
   if(dna)S.push(dna);
-  if(cat.parent&&cat.parent!=='OUTERWEAR')S.push(`CATEGORY NOTE — this is a ${noun}, NOT outerwear. Apply the DUVETICA premium aesthetic (clean construction, refined materials, modern proportions) but do NOT add down insulation, puffer padding or quilting unless it is explicitly part of the requested design.`);
+  if(cat.parent==='OUTERWEAR')S.push(DNA_OUTER); // 다운·퀼팅·로프트는 아우터에서만
+  else if(cat.parent)S.push(`CATEGORY NOTE — this is a ${noun}, NOT outerwear. Apply the DUVETICA premium aesthetic (clean construction, refined materials, modern proportions) but do NOT add down insulation, puffer padding, loft or quilting unless it is explicitly part of the requested design.`);
   if(mode==='image'){
     S.push(`Show the EXACT person from image 1 — keep their face, hair, skin tone and body identical — now wearing a newly designed DUVETICA ${noun}. Do not change who the person is; this is a dressing/try-on task.`);
     S.push(`${noun.toUpperCase()} DESIGN — construct the new ${noun} from image 2 (the DUVETICA base form) together with the reference image(s), balanced per DESIGN BALANCE below.`);
@@ -956,7 +957,7 @@ function jsonToPrompt(J,plan){
   return S.join(' ');
 }
 function rolesToText(roles){return roles.map((r,i)=>`image ${i+1}: ${r}`).join('. ');}
-function updatePromptPrev(){const plan=computePlan();$('#promptprev').textContent=jsonToPrompt(currentJSON(),plan);$('#btn-gen').disabled=!state.pick.line;}
+function updatePromptPrev(){const plan=computePlan();$('#promptprev').textContent=jsonToPrompt(currentJSON(),plan);$('#btn-gen').disabled=!(state.pick.line||state.pick.refs.size);}
 
 /* ---------- OpenAI ---------- */
 // API 키에서 보이지 않는 문자(공백·제로폭·NBSP·줄바꿈·비ASCII)를 제거 — 헤더 오류(non ISO-8859-1) 방지
@@ -1010,7 +1011,7 @@ async function analyzeFabric(){
 
 /* ---------- generate ---------- */
 async function doGenerate(){
-  if(!state.pick.line){toast('베이스 라인을 선택하세요.');return;}
+  if(!state.pick.line&&!state.pick.refs.size){toast('베이스 라인 또는 레퍼런스를 하나 이상 선택하세요.');return;}
   const plan=computePlan(),J=currentJSON(),prompt=jsonToPrompt(J,plan);
   const n=Math.max(1,Math.min(4,+($('#gen-n').value||state.settings.genCount||2)));
   const pv=$('#gen-preview');pv.classList.remove('multi');pv.innerHTML=`<div class="load"><div class="spinner"></div><span>생성 중… ${n}장</span></div>`;$('#btn-gen').disabled=true;
@@ -1019,8 +1020,9 @@ async function doGenerate(){
     const logoBaked=!!(J.branding&&J.branding.logo_on); // 생성 단계에서 로고를 이미 그렸으면 후처리 합성 생략(이중로고 방지)
     for(let i=0;i<raws.length;i++){
       const raw=raws[i];const logoUrl=(!logoBaked&&state.settings.logoDefault)?await applyLogo(raw):raw;
-      const g={id:uid(),name:`${plan.line.name} · ${J.target_season} ${J.category.parent}${raws.length>1?' #'+(i+1):''}`,season:J.target_season,
-        dataUrl:raw,logoUrl,sourceLineId:plan.line.id,refIds:plan.refs.map(r=>r.id),modelId:plan.model?plan.model.id:null,fabricId:plan.shell?plan.shell.id:null,
+      const baseName=plan.line?plan.line.name:(plan.refs[0]?plan.refs[0].name:'DUVETICA');
+      const g={id:uid(),name:`${baseName} · ${J.target_season} ${J.category.parent}${raws.length>1?' #'+(i+1):''}`,season:J.target_season,
+        dataUrl:raw,logoUrl,sourceLineId:plan.line?plan.line.id:null,refIds:plan.refs.map(r=>r.id),modelId:plan.model?plan.model.id:null,fabricId:plan.shell?plan.shell.id:null,
         category:J.category,keep:J.keep,replace:J.replace,adopt:J.adopt_from_ref,
         sheer:+$('#sheer').value,shimmer:+$('#shimmer').value,balance:+$('#balance').value,
         designJSON:J,prompt,extra:J.notes,parentId:null,createdAt:Date.now()+i};
@@ -1623,6 +1625,8 @@ async function boot(){
   const s=await getOf('settings','main');if(s)Object.assign(state.settings,s);
   if(state.settings.model==='gpt-image-1')state.settings.model='gpt-image-2'; // 최신 기본으로 승격
   if(state.settings.brandDNA==null)state.settings.brandDNA=DNA_DEFAULT;
+  // 옛 다운·퀼팅 중심 DNA가 저장돼 있으면 공통 DNA로 자동 교체(비아우터 패딩 누출 방지)
+  if(/Premium Italian down outerwear house/i.test(state.settings.brandDNA||''))state.settings.brandDNA=DNA_DEFAULT;
   if(state.settings.baseModelPrompt==null)state.settings.baseModelPrompt=BASE_MODEL_DEFAULT;
   if(state.settings.baseModelPromptMale==null)state.settings.baseModelPromptMale=BASE_MODEL_MALE_DEFAULT;
   if(state.settings.genCount==null)state.settings.genCount=2;
