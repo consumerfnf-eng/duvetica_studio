@@ -865,6 +865,34 @@ function currentJSON(){if(state.jsonDirty){try{return JSON.parse($('#designjson'
 function refreshJSON(force){if(state.jsonDirty&&!force){updatePromptPrev();return;}$('#designjson').value=JSON.stringify(buildDesignJSON(),null,2);state.jsonDirty=false;updatePromptPrev();}
 
 /* ---------- JSON → prompt ---------- */
+// 서브 타입 → 강한 기장·실루엣 지시(레퍼보다 우선)
+function subDirective(parent,sub){
+  const s=(sub||'').toUpperCase();const L=[];
+  if(/MINI/.test(s))L.push('MINI length — very short, the hem sits high on the upper thigh, clearly well above the knee and noticeably shorter than mid-thigh');
+  if(/MIDI/.test(s))L.push('MIDI length — hem around mid-calf');
+  if(/(^|\s)LONG|MAXI|LONG\s/.test(s))L.push('LONG / maxi length — hem at the ankle or floor');
+  if(/SHORTS/.test(s))L.push('short-shorts length — upper-thigh hem');
+  if(/CROP/.test(s))L.push('cropped — ends at or above the waist');
+  if(/PLEAT/.test(s))L.push('fully pleated construction with crisp knife pleats');
+  if(/A-?LINE/.test(s))L.push('A-line flared silhouette');
+  if(/PENCIL/.test(s))L.push('slim straight pencil silhouette');
+  if(/WRAP/.test(s))L.push('wrap-front construction');
+  if(/WIDE/.test(s))L.push('wide-leg silhouette');
+  if(/STRAIGHT/.test(s))L.push('straight-leg silhouette');
+  if(/TAPER/.test(s))L.push('tapered-leg silhouette');
+  if(/JOGGER/.test(s))L.push('jogger with elastic drawcord cuffed hems');
+  if(/CARGO/.test(s))L.push('cargo utility pockets');
+  if(/LEGGINGS/.test(s))L.push('tight body-hugging leggings fit');
+  if(/SLIP/.test(s))L.push('slip-dress silhouette with thin shoulder straps');
+  if(/SHIRT\s?DRESS|SHIRTDRESS/.test(s))L.push('shirt-dress with a full button placket and collar');
+  if(/KNIT/.test(s))L.push('knitted fabric construction');
+  if(/HOOD/.test(s))L.push('with an attached hood');
+  if(/VEST/.test(s)&&parent!=='OUTERWEAR')L.push('sleeveless vest, no sleeves');
+  if(/CARDIGAN/.test(s))L.push('open-front cardigan with button placket');
+  if(/BLOUSE|SHIRT/.test(s)&&parent==='TOP')L.push('woven shirt/blouse with collar and button placket');
+  if(/T-?SHIRT/.test(s))L.push('short-sleeve t-shirt');
+  return L.join('; ');
+}
 function garmentParts(cat,g){
   const parts=[`category ${cat.parent||''} / ${cat.sub||''}`.trim()];
   const add=(k,lab)=>{if(g[k])parts.push(`${lab||k} ${g[k]}`);};
@@ -904,6 +932,11 @@ function jsonToPrompt(J,plan){
     adoptClauses(J,noun).forEach(c=>S.push(c));
   }
   S.push(`${(cat.parent||'GARMENT')} — ${garmentParts(cat,g).join('; ')}.`);
+  // 서브 카테고리를 '강제 규칙'으로 — 레퍼런스보다 우선하는 옷 종류·기장·실루엣
+  if(cat.sub){
+    const sd=subDirective(cat.parent,cat.sub);
+    S.push(`GARMENT TYPE — MANDATORY: the result MUST be a ${cat.sub} (${noun}).${sd?' '+sd+'.':''} This garment TYPE, LENGTH and SILHOUETTE take priority over the references — adopt design DETAILS (collar, pleats, trims, colour mood) from the references, but keep the ${cat.sub} type and its length exactly; do NOT copy the reference's length or overall shape if it differs from a ${cat.sub}.`);
+  }
   const m=g.material||{},md=[];
   if(m.fabric_type)md.push(`${m.fabric_type} shell`);
   if(m.surface)md.push(m.surface);
@@ -1041,8 +1074,9 @@ function applyLogo(du){return new Promise(res=>{
     const W=c.width,H=c.height,pad=Math.round(W*0.045);
     const place=(w,h)=>{const p=st.logoPos;return p==='bl'?[pad,H-h-pad]:p==='br'?[W-w-pad,H-h-pad]:p==='tl'?[pad,pad]:p==='lc'?[Math.round(W*0.20),Math.round(H*0.20)]:p==='rc'?[Math.round(W-w-W*0.20),Math.round(H*0.20)]:[(W-w)/2,H-h-pad];};
     const done=()=>res(c.toDataURL('image/png'));
-    if(st.logoDataUrl){const lg=new Image();lg.onload=()=>{const w=Math.round(W*(st.logoSize/100));const h=Math.round(w*(lg.height/lg.width));const[x,y]=place(w,h);ctx.globalAlpha=.95;ctx.drawImage(lg,x,y,w,h);ctx.globalAlpha=1;done();};lg.onerror=done;lg.src=st.logoDataUrl;}
-    else{const fs=Math.round(W*(st.logoSize/100)*0.34);ctx.font=`400 ${fs}px Georgia,'Times New Roman',serif`;ctx.textBaseline='alphabetic';const txt='DUVETICA',ls=fs*0.34;const ws=[...txt].map(ch=>ctx.measureText(ch).width+ls);const tw=ws.reduce((a,b)=>a+b,0)-ls;const[x,y]=place(tw,fs);ctx.fillStyle=st.logoColor==='light'?'rgba(255,255,255,.95)':'rgba(20,19,12,.9)';ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=W*0.006;let cx=x;for(let i=0;i<txt.length;i++){ctx.fillText(txt[i],cx,y+fs);cx+=ws[i];}ctx.shadowBlur=0;done();}
+    // 업로드한 로고 PNG가 있을 때만 합성. 없으면 글씨(DUVETICA 텍스트) 넣지 않고 원본 그대로 반환.
+    if(st.logoDataUrl){const lg=new Image();lg.onload=()=>{const w=Math.round(W*(st.logoSize/100));const h=Math.round(w*(lg.height/lg.width));const[x,y]=place(w,h);ctx.globalAlpha=.95;ctx.drawImage(lg,x,y,w,h);ctx.globalAlpha=1;done();};lg.onerror=()=>res(du);lg.src=st.logoDataUrl;}
+    else{res(du);}
   };base.onerror=()=>res(du);base.src=du;
 });}
 
