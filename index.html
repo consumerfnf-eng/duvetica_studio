@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v5</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v7</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -233,7 +233,10 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <button data-v="compare">비교</button>
       <button data-v="settings">설정</button>
     </nav>
-    <div class="row" style="gap:7px"><span id="keydot" class="keydot"></span><span id="keylabel" style="font-size:11px;color:var(--ink-45)">키 미설정</span></div>
+    <div class="row" style="gap:12px">
+      <span id="whoami" style="font-size:11px;color:var(--ink-70);background:var(--card);border:1px solid var(--line);padding:3px 10px;border-radius:999px;white-space:nowrap"></span>
+      <div class="row" style="gap:7px"><span id="keydot" class="keydot"></span><span id="keylabel" style="font-size:11px;color:var(--ink-45)">키 미설정</span></div>
+    </div>
   </div>
 </header>
 
@@ -630,7 +633,15 @@ async function doLogin(){
   catch(e){$('#auth-msg').textContent='로그인 실패: '+(e.message==='invalid_grant'?'이메일 또는 비밀번호가 올바르지 않습니다.':e.message);}
   finally{b.disabled=false;b.textContent='로그인';}
 }
+function renderWhoami(){
+  const el=$('#whoami');if(!el)return;
+  const em=authEmail();
+  if(em){const lab=ownerLabel(em);el.textContent='👤 '+(lab&&lab!==em.split('@')[0]?lab+' ('+em+')':em);el.title='현재 로그인 계정: '+em;}
+  else if(cloudOn()){el.textContent='👤 로그인 안 됨';el.title='';}
+  else{el.textContent='';}
+}
 function updateAuthUI(){
+  renderWhoami();
   const who=$('#auth-who'),lo=$('#btn-logout');if(!who)return;
   if(authToken()&&authSession.user){who.textContent='로그인됨 · '+(authSession.user.email||'');lo.style.display='';}
   else{who.textContent=cloudOn()?'로그인 안 됨':'로컬 전용(로그인 불필요)';lo.style.display='none';}
@@ -841,7 +852,7 @@ function computePlan(){
   const detailRole=`DETAIL / hardware reference — reproduce ONLY this DUVETICA branded detail (logo drawcord/string, waist belt with engraved buckle, or branded zipper pull) on the garment; do NOT treat it as the overall ${noun} shape`;
   const roleFor=r=>r.detail?detailRole:designRole;
   const pushList=arr=>arr.forEach(r=>{images.push(r.dataUrl);roles.push(roleFor(r));});
-  const pushShell=()=>{if(shell){images.push(shell.dataUrl);roles.push('FINAL image = flat FABRIC SWATCH (material sample, not a garment) — replicate ONLY its weave, texture and surface sheen across the whole garment shell; do NOT take colour from it and never copy its shape (garment colour is set separately)');}};
+  const pushShell=()=>{if(shell){images.push(shell.dataUrl);roles.push('FINAL image = flat FABRIC SWATCH (material sample, not a garment). Use it for WEAVE, TEXTURE and SURFACE SHEEN ONLY. Treat the swatch as COLOUR-NEUTRAL / desaturated — even if it looks coloured, IGNORE that colour completely; the garment colour is set separately by the COLOUR instruction. Never copy its shape.');}};
   const designRefs=refs.filter(r=>!r.detail);
   let refLed=false;
   if(modelMode==='image'){
@@ -1024,11 +1035,11 @@ function jsonToPrompt(J,plan){
       ? `COLOUR — apply a NEW colourway: ${col.new_text}. Recolour the whole garment shell to this; do not copy colours from the base garment or the references (use them for shape/detail only). Keep it a refined premium DUVETICA tone.`
       : `COLOUR — propose a NEW premium seasonal colourway that fits DUVETICA for ${J.target_season||'the season'} (a fresh, elevated, on-trend tone). Do not copy colours from the base garment or the references; use those only for shape and detailing.`);
   }else if(col.source==='ref_like'){
-    S.push(`COLOUR — take inspiration from the reference image(s)' colours${which}, but use a similar / harmonising interpretation (close tones, not an exact match) refined into a premium DUVETICA palette.`);
+    S.push(`COLOUR — take the colour from the reference image(s)${which}, using a close, harmonising interpretation (similar hue family, slightly refined) — NOT the fabric swatch's colour, NOT the base garment's colour.`);
   }else{ // ref (그대로, 기본)
-    S.push(`COLOUR — derive the garment colourway directly from the reference image(s)${which}. Match their exact hues and tonal balance on the new ${noun}.`);
+    S.push(`COLOUR — the garment colour MUST come from the reference image(s)${which}: match the MAIN colour and hue of the reference garment as closely as possible across the entire ${noun}. Do NOT use the fabric swatch's colour and do NOT use the base garment's colour — only the reference's colour.`);
   }
-  if(m.shell_ref)S.push(`COLOUR AUTHORITY — the COLOUR instruction above is the single source of the garment colour. The fabric swatch contributes material texture/weave/sheen only; disregard the swatch's own colour.`);
+  if(m.shell_ref)S.push(`COLOUR AUTHORITY — the COLOUR instruction above is the SINGLE source of the garment colour. The fabric swatch contributes texture/weave/sheen only — treat it as colour-neutral and NEVER tint the garment toward the swatch's colour. Final garment colour = the COLOUR instruction, not the swatch.`);
   const b=J.branding||{};
   if(b.logo_on){
     S.push(LOGO_RULE);
@@ -1759,7 +1770,7 @@ async function boot(){
   if(state.settings.genCount==null)state.settings.genCount=2;
   if(state.settings.supaBucket==null)state.settings.supaBucket='duvetica-studio';
   // 로컬 UI는 로그인 전에 준비 (게이트가 위를 덮음)
-  fillSeasonSelects();wire();applyCategory(true);loadSettingsUI();updateKeyDot();refreshJSON(true);
+  fillSeasonSelects();wire();applyCategory(true);loadSettingsUI();updateKeyDot();refreshJSON(true);renderWhoami();
   loadSession();
   // 클라우드(공용) 사용 시 로그인 필수 — 승인된 계정만 데이터 접근
   if(cloudOn()){
