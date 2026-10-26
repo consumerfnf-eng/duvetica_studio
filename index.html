@@ -35,6 +35,13 @@ header{position:sticky;top:0;z-index:50;background:rgba(246,243,236,.9);backdrop
 .card .gsel.on{background:var(--pine);color:#fff}
 .card.selectable{outline:1px dashed var(--line-2,#ccc);outline-offset:-1px}
 .shdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#C0392B;margin-right:5px;vertical-align:middle}
+.mixstrip-wrap{margin:16px 0 4px}
+.mixhead{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-45);margin-bottom:8px}
+.mixstrip{display:flex;gap:10px;flex-wrap:wrap}
+.mixchip{width:88px}
+.mixthumb{width:88px;height:112px;border-radius:8px;border:1px solid var(--line);background:var(--line-2,#eee) center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:var(--ink-45);font-size:11px}
+.mixlab{font-size:10px;font-weight:600;color:var(--pine);margin-top:4px}
+.mixsub{font-size:10px;color:var(--ink-45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 nav{display:flex;gap:2px;flex:1}
 nav button{background:none;border:none;padding:9px 15px;font-size:12.5px;letter-spacing:.04em;color:var(--ink-45);border-radius:7px;transition:.15s}
 nav button:hover{color:var(--ink);background:var(--line-2)}
@@ -218,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v2</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v4</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -733,6 +740,15 @@ function resizeDataUrl(du,max=1024){return new Promise(res=>{const img=new Image
 function dataUrlToBlob(du){if(typeof du!=='string')throw new Error('내부 오류: 이미지 데이터 형식이 올바르지 않습니다.');const[head,b64]=du.split(',');const mime=(head.match(/:(.*?);/)||[])[1]||'image/png';const bin=atob(b64);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);return new Blob([a],{type:mime});}
 function prevSeason(s){const m=/^(\d{2})(SS|FW)$/i.exec((s||'').trim());if(!m)return'';return String(+m[1]-1).padStart(2,'0')+m[2].toUpperCase();}
 function download(du,name){const a=document.createElement('a');a.href=du;a.download=name;a.click();}
+// 그리드 썸네일 전용: Supabase Storage 공개 URL을 작은 WebP로 변환해 전송량·로딩 절감.
+// (확대·편집·생성 입력엔 원본 it.dataUrl 그대로 — 화질·생성품질 손실 없음)
+function thumb(url,w){
+  w=w||400;
+  if(typeof url!=='string'||!url)return url;
+  if(/^data:/.test(url))return url;                         // base64 원본은 그대로
+  if(url.indexOf('/storage/v1/object/public/')===-1)return url; // 외부(CSV 핫링크 등)는 그대로
+  return url.replace('/storage/v1/object/public/','/storage/v1/render/image/public/')+(url.indexOf('?')===-1?'?':'&')+`width=${w}&quality=55&resize=contain`;
+}
 
 function sheerText(v){v=+v;return v<12?'completely opaque solid fabric, no transparency':v<38?'subtle sheer accent only at select panels':v<68?'clearly semi-transparent paneling, translucent overlay sections':'strongly sheer see-through fabric, chiffon-like translucent layering';}
 function shimmerText(v){v=+v;return v<12?'a flat matte surface finish, no sheen (this controls surface gloss only, never the color)':v<38?'a soft satin sheen on the fabric surface (gloss only, keep the original color)':v<68?'a glossy lustrous surface sheen, light-reflective finish (surface gloss only — do NOT change the garment color, no silver/metallic tint)':'a high-gloss wet-look lacquered surface sheen (surface shine only — keep the original color, do NOT make it silver or metallic-colored)';}
@@ -1118,7 +1134,7 @@ function libGrid(store){
     const selbox=selMode?`<span class="selbox ${on?'on':''}">${on?'✓':''}</span>`:'';
     const trend=(store==='refs'&&it.trend)?' trend':'';
     const trendbadge=(store==='refs'&&it.trend)?`<span class="trendbadge">TREND</span>`:'';
-    return`<div class="card ${sw} ${on?'picked':''}${trend}" data-id="${it.id}" data-store="${store}">${rb}${trendbadge}${selbox}<button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
+    return`<div class="card ${sw} ${on?'picked':''}${trend}" data-id="${it.id}" data-store="${store}">${rb}${trendbadge}${selbox}<button class="x" data-del="${it.id}" data-store="${store}">✕</button><span class="thumb" style="background-image:url('${thumb(it.dataUrl)}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
   }).join('');
 }
 async function bulkApply(store){
@@ -1154,14 +1170,14 @@ function refreshCounts(){['lines','refs','models','fabrics'].forEach(s=>$('#c-'+
 function renderPickBar(store){
   const bar=$('#pick-'+store);
   const sel=store==='lines'?(state.pick.line?[state.lines.find(l=>l.id===state.pick.line)].filter(Boolean):[]):state.refs.filter(r=>state.pick.refs.has(r.id));
-  bar.innerHTML=sel.map(it=>`<div class="thumbchip"><img src="${it.dataUrl}"><span>${esc(it.name)}</span><button data-unpick="${store}" data-uid="${it.id}">✕</button></div>`).join('')
+  bar.innerHTML=sel.map(it=>`<div class="thumbchip"><img src="${thumb(it.dataUrl,160)}"><span>${esc(it.name)}</span><button data-unpick="${store}" data-uid="${it.id}">✕</button></div>`).join('')
     +`<button class="btn sm addarch" data-arch="${store}">＋ 아카이브에서 셀렉</button>`;
 }
 function pickGrid(store){
   const el=$('#pick-'+store),items=state[store],sw=store==='fabrics'?'sw':'';
   if(!items.length){el.innerHTML=`<div class="empty" style="grid-column:1/-1;padding:16px">라이브러리에서 먼저 올려주세요.</div>`;return;}
   el.innerHTML=items.map(it=>{const on=store==='models'?state.pick.model===it.id:state.pick.fabric===it.id;
-    return`<div class="card ${sw} ${on?'sel':''}" data-pick="${store}" data-id="${it.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`;}).join('');
+    return`<div class="card ${sw} ${on?'sel':''}" data-pick="${store}" data-id="${it.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${thumb(it.dataUrl)}')"></span><div class="meta"><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div></div></div>`;}).join('');
 }
 function renderPicks(){
   const src=prevSeason($('#season').value);
@@ -1216,7 +1232,7 @@ function openArchive(store){
       const _b=sales.filter(s=>s.rank<=10).map(s=>`<span class="rankbadge ${s.half==='SS'?'ss':'fw'}">${s.half} #${s.rank}</span>`).join('');
       const rb=_b?`<div class="rankbadges">${_b}</div>`:'';
       const sa=sales.length?`<div class="salerow">`+sales.map(s=>`<span class="saleamt ${s.rank<=10?(s.half==='SS'?'ss':'fw'):'dim'}">${esc(s.season)} ${esc(s.amtStr)}</span>`).join('')+`</div>`:'';
-      return`<div class="acard ${on?'sel':''}" data-aid="${it.id}">${rb}<span class="pick">✓</span><span class="thumb" style="background-image:url('${it.dataUrl}')"></span><div class="meta"><div class="br">DUVETICA${it.season?' · '+esc(it.season):''}</div><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
+      return`<div class="acard ${on?'sel':''}" data-aid="${it.id}">${rb}<span class="pick">✓</span><span class="thumb" style="background-image:url('${thumb(it.dataUrl)}')"></span><div class="meta"><div class="br">DUVETICA${it.season?' · '+esc(it.season):''}</div><div class="nm">${esc(it.name)}</div><div class="tg">${esc(metaLine(store,it))}</div>${sa}</div></div>`;
     }).join('');
   }
   chips();render();
@@ -1281,7 +1297,7 @@ function galleryGrid(){
     const recv=(!mine)?`<span class="recvbadge">↗ 공유받음</span>`:'';
     const sel=state.galSelMode&&mine?`<span class="gsel ${state.galSel.has(g.id)?'on':''}" data-galsel="${g.id}">${state.galSel.has(g.id)?'✓':''}</span>`:'';
     const delBtn=mine?`<button class="x" data-galdel="${g.id}">✕</button>`:'';
-    return`<div class="card ${state.galSelMode&&mine?'selectable':''}" data-gid="${g.id}">${delBtn}${recv}${sel}<span class="thumb" style="background-image:url('${showLogo&&g.logoUrl?g.logoUrl:g.dataUrl}')"></span><div class="meta"><div class="nm">${shareDot}${esc(g.name)}</div><div class="tg">${tg}</div></div></div>`;}).join('');
+    return`<div class="card ${state.galSelMode&&mine?'selectable':''}" data-gid="${g.id}">${delBtn}${recv}${sel}<span class="thumb" style="background-image:url('${thumb(showLogo&&g.logoUrl?g.logoUrl:g.dataUrl)}')"></span><div class="meta"><div class="nm">${shareDot}${esc(g.name)}</div><div class="tg">${tg}</div></div></div>`;}).join('');
 }
 function shareGallerySelected(){
   if(!state.galSel.size){toast('공유할 생성물을 먼저 선택하세요.');return;}
@@ -1300,26 +1316,44 @@ function shareGallerySelected(){
 
 /* ---------- compare ---------- */
 function compareSelect(){const sel=$('#cmp-select');const items=state.gallery.filter(g=>g.sourceLineId).sort((a,b)=>b.createdAt-a.createdAt);sel.innerHTML=`<option value="">— 선택 —</option>`+items.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');}
+function colorSourceKo(J){const c=(J&&J.color)||{};const map={ref:'레퍼런스 컬러',ref_like:'레퍼런스 유사 컬러',new:'NEW 컬러'+(c.new_text?' ('+c.new_text+')':''),duv_like:'듀베티카 유사 컬러',duv:'듀베티카 컬러'};return map[c.source]||'—';}
 function renderCompare(gid){
   const box=$('#cmp-body');if(!gid){box.innerHTML='';return;}
   const g=state.gallery.find(x=>x.id===gid),line=state.lines.find(l=>l.id===g.sourceLineId);
+  const refs=(g.refIds||[]).map(id=>state.refs.find(x=>x.id===id)).filter(Boolean);
   const refNames=(g.refIds||[]).map(id=>{const r=state.refs.find(x=>x.id===id);return r?r.name:'(삭제됨)';});
+  const model=g.modelId?state.models.find(m=>m.id===g.modelId):null;
+  const fab=g.fabricId?state.fabrics.find(f=>f.id===g.fabricId):null;
   const cat=g.category?`${g.category.parent} / ${g.category.sub}`:'—';
+  const J=g.designJSON||{};
+  const refMix=(J.ref_mix!=null)?`${Math.round(J.ref_mix*100)}/100 (${refmixHint(J.ref_mix*100)})`:'—';
+  // 믹스 재료 썸네일 스트립
+  const chip=(label,img,sub)=>`<div class="mixchip"><div class="mixthumb"${img?` style="background-image:url('${thumb(img,240)}')"`:''}>${img?'':'—'}</div><div class="mixlab">${esc(label)}</div>${sub?`<div class="mixsub">${esc(sub)}</div>`:''}</div>`;
+  const strip=[
+    chip('① 베이스 라인', line?line.dataUrl:'', line?line.name:'없음(레퍼 기반)'),
+    ...refs.map((r,i)=>chip(`② 레퍼 ${i+1}`, r.dataUrl, r.name)),
+    fab?chip('원단', fab.dataUrl, fab.ftype||fab.name):'',
+    model?chip('모델', model.dataUrl, model.name):''
+  ].filter(Boolean).join('');
   box.innerHTML=`
     <div class="cmp">
-      <div><div class="caphead"><span class="t">${line?esc(line.name):'원본 없음'}</span><span class="s">${line?esc(line.season):''} · Source</span></div>
-        <div class="frame">${line?`<img src="${line.dataUrl}">`:'<div class="empty" style="height:100%">원본 라인이 삭제됨</div>'}</div></div>
+      <div><div class="caphead"><span class="t">${line?esc(line.name):(refs[0]?esc(refs[0].name):'원본 없음')}</span><span class="s">${line?esc(line.season):'레퍼 기반'} · Source</span></div>
+        <div class="frame">${line?`<img src="${line.dataUrl}">`:(refs[0]?`<img src="${refs[0].dataUrl}">`:'<div class="empty" style="height:100%">원본 없음</div>')}</div></div>
       <div><div class="caphead"><span class="t">${esc(g.name)}</span><span class="s">${esc(g.season)} · Generated</span></div>
         <div class="frame"><img src="${g.logoUrl||g.dataUrl}"></div></div>
     </div>
+    <div class="mixstrip-wrap"><div class="mixhead">무엇을 섞었나</div><div class="mixstrip">${strip}</div></div>
     <table class="difftable">
       <tr><td>시즌</td><td>${line?esc(line.season)+' → ':''}<b>${esc(g.season)}</b></td></tr>
       <tr><td>카테고리</td><td>${esc(cat)}</td></tr>
+      <tr><td>디자인 밸런스</td><td>${g.balance!=null?g.balance:35}/100 <span style="color:var(--ink-45)">(${balanceHint(g.balance!=null?g.balance:35)})</span></td></tr>
+      <tr><td>레퍼런스 1·2 기울기</td><td>${refMix}</td></tr>
+      <tr><td>컬러 주도</td><td>${esc(colorSourceKo(J))}</td></tr>
+      <tr><td>소재 / 원단</td><td>${fab?esc(fab.ftype||fab.name)+' · ':''}Sheer ${g.sheer} · Shimmer ${g.shimmer} <span style="color:var(--ink-45)">(${sheerHint(g.sheer)}/${shimmerHint(g.shimmer)})</span></td></tr>
+      <tr><td>모델</td><td>${model?esc(model.name):'기본 프롬프트'}</td></tr>
       <tr><td>유지 KEEP</td><td>${(g.keep||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join('')||'—'}</td></tr>
       <tr><td>교체 REPLACE</td><td>${(g.replace||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join('')||'—'}</td></tr>
       <tr><td>채용 ADOPT</td><td>${(g.adopt||[]).map(k=>`<span class="chip">${esc(k)}</span>`).join('')||'—'}</td></tr>
-      <tr><td>소재</td><td>Sheer ${g.sheer} · Shimmer ${g.shimmer} <span style="color:var(--ink-45)">(${sheerHint(g.sheer)}/${shimmerHint(g.shimmer)})</span></td></tr>
-      <tr><td>디자인 밸런스</td><td>${g.balance!=null?g.balance:35}/100 <span style="color:var(--ink-45)">(${balanceHint(g.balance!=null?g.balance:35)})</span></td></tr>
       <tr><td>레퍼런스</td><td>${refNames.length?refNames.map(n=>`<span class="chip">${esc(n)}</span>`).join(''):'—'}</td></tr>
     </table>
     <div class="row" style="margin-top:14px"><button class="btn sm" id="cmp-ai">AI 차이 설명 생성</button><button class="btn sm ghost" id="cmp-json">분석 JSON 보기</button></div>
@@ -1356,7 +1390,7 @@ function openEdit(gid){
         <div class="slider-wrap"><div class="slider-head"><span class="lab">볼륨 · 충전재</span><span class="val" id="e-volume-v">${editG.volume!=null?editG.volume:50}</span></div><input type="range" id="e-volume" min="0" max="100" value="${editG.volume!=null?editG.volume:50}"><div class="slider-hint" id="e-volume-h"></div></div>
         <button class="btn sm" id="edit-finish-go" style="margin-top:8px">마감 재적용</button>
       </div></div>`;
-  $('#edit-models').innerHTML=state.models.length?state.models.map(m=>`<div class="card" data-emodel="${m.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${m.dataUrl}')"></span></div>`).join(''):'<div class="hint">기본모델을 먼저 올려주세요.</div>';
+  $('#edit-models').innerHTML=state.models.length?state.models.map(m=>`<div class="card" data-emodel="${m.id}"><span class="pick">✓</span><span class="thumb" style="background-image:url('${thumb(m.dataUrl,160)}')"></span></div>`).join(''):'<div class="hint">기본모델을 먼저 올려주세요.</div>';
   let chosenModel=null;
   $$('#edit-models .card').forEach(c=>c.onclick=()=>{$$('#edit-models .card').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');chosenModel=c.dataset.emodel;});
   renderVersions();
