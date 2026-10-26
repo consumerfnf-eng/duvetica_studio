@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v5</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v6</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -304,6 +304,8 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
                 <select id="model-source" class="inp" style="flex:1"><option value="idol">기본 프롬프트</option><option value="preserve">베이스 라인 모델 유지</option></select>
               </div>
               <div class="hint" id="model-hint" style="margin:0 0 8px">성별을 고르면 그 기본 프롬프트로 모델이 생성됩니다. 모델 이미지를 선택하면 그 인물로 대체합니다.</div>
+              <label class="fld" style="margin-top:2px">스타일링 변형 <span class="hint" style="margin:0">— 부츠·코디·포즈를 얼마나 바꿀지</span></label>
+              <select id="style-vary" class="inp"><option value="fixed">고정 (베이스 그대로)</option><option value="slight">약간 변형</option><option value="varied">다양하게</option></select>
               <div id="pick-models" class="cards"></div></div>
             <div><div class="sectlabel">4 · SHELL 원단 (선택)</div><div id="pick-fabrics" class="cards"></div>
               <button class="btn sm" id="btn-fabric-analyze" style="margin-top:8px" title="선택한 원단 스와치를 비전 모델이 읽어 색·조직·광택을 텍스트로 변환해 반영">AI 원단 분석</button>
@@ -872,6 +874,7 @@ function buildDesignJSON(){
     design_balance:+$('#balance').value/100,
     ref_mix:(plan.refs&&plan.refs.length>=2)?(+($('#refmix')?$('#refmix').value:50)/100):null,
     color:{source:colorSrcFromBal($('#color-bal')?+$('#color-bal').value:100),new_text:($('#color-new')&&$('#color-new').value.trim())||''},
+    style_vary:($('#style-vary')&&$('#style-vary').value)||'fixed',
     branding:{brand:'DUVETICA',logo_on:!!($('#logo-generate')&&$('#logo-generate').checked&&$('#logogen-wrap')&&$('#logogen-wrap').style.display!=='none'),logo:'authentic DUVETICA badge — wide rounded-rectangle plaque with a shallow centre point on the bottom edge, wearer left chest, tone-on-tone',logo_position:'upper left chest (wearer left)',logo_scale:'small refined 5-6cm'},
     priority:{model:plan.model?'model reference':'base image',garment_structure:'reference image',brand_rules:'DUVETICA DNA'},
     notes:$('#extra').value.trim()
@@ -938,7 +941,8 @@ function jsonToPrompt(J,plan){
     S.push(`Show the EXACT person from image 1 — keep their face, hair, skin tone and body identical — now wearing a newly designed DUVETICA ${noun}. Do not change who the person is; this is a dressing/try-on task.`);
     S.push(`${noun.toUpperCase()} DESIGN — construct the new ${noun} from image 2 (the DUVETICA base form) together with the reference image(s), balanced per DESIGN BALANCE below.`);
     adoptClauses(J,noun).forEach(c=>S.push(c));
-    S.push(`STYLING & POSE — follow the outfit styling, pose, framing and background of image 2, but the person is always the model from image 1.`);
+    if((J.style_vary||'fixed')==='fixed')S.push(`STYLING & POSE — follow the outfit styling, pose, framing and background of image 2, but the person is always the model from image 1.`);
+    else S.push(`STYLING — keep the person from image 1; use image 2 for the garment design only, and restyle the rest of the look per STYLING VARIATION below.`);
   }else if(mode==='idol'){
     if(baseModelPromptFor())S.push(`SUBJECT / MODEL — ${baseModelPromptFor().trim()}`);
     if(plan&&plan.refLed)S.push(`${noun.toUpperCase()} DESIGN — build the ${noun} PRIMARILY from the reference image(s) (image 1): take their overall shape, silhouette and neckline. Use the DUVETICA base form only for brand quilting quality and premium finishing, NOT for silhouette.`);
@@ -952,6 +956,10 @@ function jsonToPrompt(J,plan){
     adoptClauses(J,noun).forEach(c=>S.push(c));
   }
   S.push(`${(cat.parent||'GARMENT')} — ${garmentParts(cat,g).join('; ')}.`);
+  // 스타일링(부츠·코디·포즈) 변형 (preserve 모드는 '그대로 유지'가 목적이라 제외)
+  const sv=(mode!=='preserve')?(J.style_vary||'fixed'):'fixed';
+  if(sv==='slight')S.push(`STYLING VARIATION — keep the overall cohesive premium DUVETICA look, but subtly VARY the secondary styling: choose slightly different yet tasteful footwear, coordinating pieces and a new natural pose and framing. Do NOT reproduce the exact same boots, shoes or pose as the base image. Keep the hero ${noun} unchanged.`);
+  else if(sv==='varied')S.push(`STYLING VARIATION — freely restyle the full look into a fresh premium editorial: distinctly different footwear, different coordinating pieces (bottoms / top / accessories as appropriate), a different pose, framing and background lighting mood. Keep ONLY the hero ${noun} and the DUVETICA aesthetic; do NOT reuse the base image's boots, shoes, accessories or pose.`);
   // 서브 카테고리를 '강제 규칙'으로 — 레퍼런스보다 우선하는 옷 종류·기장·실루엣
   if(cat.sub){
     const sd=subDirective(cat.parent,cat.sub);
@@ -1664,6 +1672,7 @@ function wire(){
   $('#cat-sub').addEventListener('change',()=>refreshJSON());
   $('#model-source').addEventListener('change',()=>updatePromptPrev());
   $('#gen-gender').addEventListener('change',()=>{updateGenderUI();updatePromptPrev();});
+  $('#style-vary').addEventListener('change',()=>refreshJSON(true));
   $('#extra').addEventListener('input',()=>refreshJSON());
   $('#logo-generate').addEventListener('change',()=>refreshJSON(true));
   $('#designjson').addEventListener('input',()=>{state.jsonDirty=true;updatePromptPrev();});
