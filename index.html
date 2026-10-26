@@ -27,8 +27,14 @@ header{position:sticky;top:0;z-index:50;background:rgba(246,243,236,.9);backdrop
 .wordmark{font-family:var(--serif);font-weight:400;letter-spacing:.42em;font-size:16px;text-transform:uppercase;padding-right:22px;border-right:1px solid var(--line);white-space:nowrap}
 .wordmark small{display:block;letter-spacing:.28em;font-size:9px;color:var(--ink-45);margin-top:3px}
 .wordmark small.team{letter-spacing:.16em;font-size:9px;color:var(--ink-70);margin-top:2px}
+.wordmark small.ver{letter-spacing:.1em;font-size:8px;color:var(--pine);margin-top:1px}
 .card.trend{outline:2px solid #C0392B;outline-offset:-2px}
 .card .trendbadge{position:absolute;top:8px;right:8px;background:#C0392B;color:#fff;font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:6px;z-index:2}
+.card .recvbadge{position:absolute;top:8px;left:8px;background:var(--plum,#7a5a8a);color:#fff;font-size:9px;font-weight:600;padding:2px 6px;border-radius:6px;z-index:2}
+.card .gsel{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.9);border:1.5px solid var(--pine);color:var(--pine);display:flex;align-items:center;justify-content:center;font-size:12px;z-index:3;cursor:pointer}
+.card .gsel.on{background:var(--pine);color:#fff}
+.card.selectable{outline:1px dashed var(--line-2,#ccc);outline-offset:-1px}
+.shdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#C0392B;margin-right:5px;vertical-align:middle}
 nav{display:flex;gap:2px;flex:1}
 nav button{background:none;border:none;padding:9px 15px;font-size:12.5px;letter-spacing:.04em;color:var(--ink-45);border-radius:7px;transition:.15s}
 nav button:hover{color:var(--ink);background:var(--line-2)}
@@ -212,7 +218,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v1</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -247,6 +253,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <div id="lib-refs" class="libpane" style="display:none">
       <div class="panel">
         <div class="drop" data-store="refs"><b>레퍼런스 이미지 올리기</b><br><span style="font-size:12px">채용할 디자인(카라·퀼팅·실루엣·핏) 레퍼런스 · 드래그·클릭·<b>Ctrl+V 붙여넣기</b> · 파일명 <b>성별_카테고리_시즌_이름</b>이면 자동 분류</span></div>
+        <div id="ref-room" class="row" style="gap:8px;margin:12px 0 0"></div>
         <div class="bulkbar" data-store="refs"></div>
         <div class="arch-chips" id="lib-refs-chips" style="margin:14px 0 0"></div>
         <div id="grid-refs" class="cards lg"></div>
@@ -378,6 +385,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
       <div class="row" style="gap:12px"><button class="btn sm" id="btn-gal-upload">＋ 이미지 업로드</button><label class="row" style="font-size:12px;color:var(--ink-70);gap:6px"><input type="checkbox" id="showlogo" checked> 로고 표시</label></div>
     </div>
     <div class="drop" id="gal-drop" style="margin-bottom:14px;padding:16px"><b>여기로 이미지를 끌어다 놓아 갤러리에 바로 추가</b><br><span style="font-size:12px">생성 없이 완성 이미지를 올릴 수 있어요 · 파일명 <b>성별_카테고리_시즌_이름</b> 이면 자동 분류</span></div>
+    <div id="gal-sharebar" class="row" style="gap:8px;margin-bottom:10px;flex-wrap:wrap"></div>
     <div id="grid-gallery" class="cards lg"></div>
   </section>
 
@@ -558,6 +566,9 @@ async function uploadImages(store,item){
 let authSession=null; // {access_token, refresh_token, expires_at, user}
 function authToken(){return authSession&&authSession.access_token;}
 function ownerId(){return authSession&&authSession.user&&authSession.user.id||null;} // 로그인 사용자 uuid = 갤러리 소유자
+function authEmail(){return(authSession&&authSession.user&&authSession.user.email||'').toLowerCase();}
+const SECRET_OWNERS=['jisoo07@fnfcorp.com','jin@fnfcorp.com']; // 소전팀 전용 레퍼런스 접근 계정
+function canSecret(){return SECRET_OWNERS.includes(authEmail());}
 function bearer(){return authToken()||supaCfg().key;}
 function saveSession(s){authSession=s;try{localStorage.setItem('duvetica_auth',JSON.stringify(s));}catch(e){}}
 function loadSession(){try{const s=JSON.parse(localStorage.getItem('duvetica_auth')||'null');if(s&&s.access_token)authSession=s;}catch(e){}}
@@ -611,7 +622,8 @@ function updateAuthUI(){
 async function storeAll(s){
   if(cloudOn()&&CLOUD_STORES.includes(s)){
     let rows=await supaSelect(s);
-    if(s==='gallery'){const me=ownerId();rows=rows.filter(v=>v&&v.owner===me);} // 내 결과물만
+    if(s==='gallery'){const me=ownerId(),em=authEmail();rows=rows.filter(v=>v&&(v.owner===me||v.shareAll||(Array.isArray(v.sharedWith)&&v.sharedWith.includes(em))));} // 내 것 + 공유받은 것
+    if(s==='refs'&&!canSecret())rows=rows.filter(v=>!v.secret); // 소전팀 전용 레퍼런스는 승인 계정만 로드
     rows.forEach(v=>putOf(s,v).catch(()=>{}));
     return rows;
   }
@@ -631,7 +643,9 @@ async function toBlob(du){
 }
 
 /* ---------- defaults ---------- */
-const DNA_DEFAULT=`Premium Italian down outerwear house. Lightweight yet dimensional construction; sophisticated nylon surface with a subtle glossy or silky finish. Refined rather than sporty quilting; clean high-density stitching; premium volume control; modern feminine silhouette with controlled waist definition when appropriate. Avoid cheap flat quilting, avoid overly tactical outdoor appearance, avoid generic mass-market proportions. QUILTING RULE: diamond quilting must read clean, symmetrical and softly dimensional with consistent stitch tension and premium loft. LOGO RULE: do NOT draw any brand logo, patch, label or lettering on the garment — the surface stays completely blank and unbranded; the DUVETICA logo is added later in post-production.`;
+const DNA_DEFAULT=`Premium Italian fashion house. Lightweight yet refined construction; sophisticated surfaces with a subtle, elevated finish; clean high-density stitching and premium detailing; modern, sophisticated silhouettes with controlled proportions. Avoid cheap, bulky or mass-market construction; avoid an overly tactical or sporty outdoor appearance. LOGO RULE: do NOT draw any brand logo, patch, label or lettering on the garment — the surface stays completely blank and unbranded; the DUVETICA logo is added later in post-production.`;
+// 아우터 전용 DNA — OUTERWEAR 카테고리일 때만 코드가 추가(다운·퀼팅·로프트). 비아우터엔 절대 주입 안 됨.
+const DNA_OUTER=`DUVETICA OUTERWEAR — this is a premium Italian down outerwear piece: lightweight yet dimensional down construction, sophisticated nylon shell with a subtle glossy or silky finish, refined (not sporty) quilting, premium volume control. QUILTING RULE: diamond quilting must read clean, symmetrical and softly dimensional with consistent stitch tension and premium loft. Avoid cheap flat quilting.`;
 const BASE_MODEL_DEFAULT=`Beautiful young adult Korean female K-pop idol, unmistakably Korean features: small refined oval face, soft V-line jaw, clear luminous skin, natural glossy hair. Minimal clean white studio background, full-length editorial lookbook lighting, wearing a Duvetica-inspired premium piece.`;
 const BASE_MODEL_MALE_DEFAULT=`Korean male model, clean refined Korean actor visual, soft fair skin, sharp jawline, straight brows, calm deep eyes, natural soft lips, elegant masculine beauty, realistic black medium-length layered hair with soft volume and natural center-part fringe. Minimal clean white studio background, full-length editorial lookbook lighting, wearing a Duvetica-inspired premium piece.`;
 const LOGO_RULE=`DUVETICA LOGO — MANDATORY BRAND RULE. Every generated DUVETICA outerwear design MUST include exactly one DUVETICA logo badge on the WEARER'S LEFT CHEST (viewer's right in a front-facing image). LOGO DESIGN: the badge is a HORIZONTALLY WIDE ROUNDED-RECTANGLE PLAQUE (a wide flattened shield) — straight top edge, short vertical sides with softly rounded corners, and a bottom edge that runs mostly straight then angles gently down to a single soft shallow point at the horizontal centre; a thin inset outline runs parallel just inside the outer edge; it is roughly 2.2-2.6x wider than tall; it is NOT a pentagon, hexagon, circle/oval, plain pointless rectangle, or upside-down. Display the word "DUVETICA" once in bold uppercase sans-serif, correctly spelled, centered and spanning most of the badge width on one line; keep the logo small, refined, premium and proportionate to the garment, approximate physical width 5-6 cm. TONE-ON-TONE COLOR RULE: automatically derive the badge color from the garment's main outer-shell color; use the same hue family as the outer fabric; the badge may be only slightly darker or lighter than the garment with subtle tonal contrast; the logo must look integrated into the garment, not like a contrasting graphic; match the surface character of the outer fabric — matte on matte fabric, softly lustrous on glossy or velvet fabric. PLACEMENT RULE: fix the badge to the upper-left chest of the wearer; do not move it to the wearer's right chest, sleeve, collar, hem, pocket or center front; do not duplicate the logo; if the body is turned, preserve its true physical position on the wearer's left chest, allowing natural perspective or partial occlusion instead of relocating it. PROHIBITED: no pentagon, hexagon, circle, oval or generic shield outline; no plain rectangle missing the shallow bottom centre point; no upside-down badge; no white, gold, silver or high-contrast border unless explicitly requested; no oversized logo; no floating, printed, distorted, mirrored, duplicated or misspelled logo; no additional branding or text anywhere else on the garment. This is a mandatory construction element, not an optional styling detail.`;
@@ -703,7 +717,7 @@ const state={
   lines:[],refs:[],models:[],fabrics:[],gallery:[],
   pick:{line:null,refs:new Set(),model:null,fabric:null},
   brief:{keep:new Set(),replace:new Set(),adopt:new Set(),fabricType:''},
-  aiAttrs:{}, jsonDirty:false, galFilter:'all',
+  aiAttrs:{}, jsonDirty:false, galFilter:'all', galSelMode:false, galSel:new Set(), refSecretView:false,
   libFilter:{lines:{gender:'ALL',gcat:'ALL',season:'ALL'},refs:{gender:'ALL',gcat:'ALL',season:'ALL'}},
   libSelMode:{lines:false,refs:false}, libSel:{lines:new Set(),refs:new Set()},
   salesMap:{}, salesRaw:''
@@ -1055,6 +1069,7 @@ function libGrid(store){
   const grid=$('#grid-'+store),sw=store==='fabrics'?'sw':'';
   let items=state[store].slice().sort((a,b)=>b.createdAt-a.createdAt); // 최신순
   const filtered=store==='lines'||store==='refs';
+  if(store==='refs'){renderRefRoom();items=items.filter(it=> state.refSecretView ? !!it.secret : !it.secret );} // 공용 / 🔒소전팀 분리
   if(filtered){renderLibChips(store);renderBulkBar(store);items=items.filter(it=>matchFilter(store,it));}
   if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">${filtered&&hasActiveFilter(store)?'해당 조건의 항목이 없습니다.':'아직 없습니다. 위에서 올려주세요.'}</div>`;return;}
   const selMode=filtered&&state.libSelMode[store];
@@ -1076,6 +1091,15 @@ async function bulkApply(store){
   const ids=[...state.libSel[store]];if(!ids.length){toast('선택된 항목이 없습니다');return;}
   for(const id of ids){const it=state[store].find(x=>x.id===id);if(!it)continue;if(g)it.gender=g;if(c)it.gcat=c;if(s)it.season=s;await storePut(store,it);}
   state.libSel[store].clear();libGrid(store);toast(`${ids.length}개 항목에 적용됨`);
+}
+function renderRefRoom(){
+  const el=$('#ref-room');if(!el)return;
+  if(!canSecret()){el.style.display='none';if(state.refSecretView)state.refSecretView=false;return;}
+  el.style.display='';
+  el.innerHTML=`<span class="chiplabel" style="margin-right:2px">방</span>`
+    +`<button class="togglepill ${!state.refSecretView?'on':''}" data-refroom="pub">공용</button>`
+    +`<button class="togglepill ${state.refSecretView?'on':''}" data-refroom="sec">🔒 소전팀</button>`
+    +`<span class="hint" style="margin:0 0 0 6px">소전팀 방은 소비자전략팀 지정 계정에만 보입니다</span>`;
 }
 function matchFilter(store,it){const f=state.libFilter[store];if(!f)return true;return(f.gender==='ALL'||it.gender===f.gender)&&(f.gcat==='ALL'||it.gcat===f.gcat)&&(f.season==='ALL'||it.season===f.season);}
 function hasActiveFilter(store){const f=state.libFilter[store];return f&&(f.gender!=='ALL'||f.gcat!=='ALL'||f.season!=='ALL');}
@@ -1115,7 +1139,7 @@ function renderPicks(){
 /* ---------- ARCHIVE BROWSER ---------- */
 function openArchive(store){
   const isLines=store==='lines',multi=store==='refs';
-  let q='',genderF='ALL',gcatF='ALL',tagF='ALL',seasonF=isLines?(prevSeason($('#season').value)||'ALL'):'ALL';
+  let q='',genderF='ALL',gcatF='ALL',tagF='ALL',secretF=false,seasonF=isLines?(prevSeason($('#season').value)||'ALL'):'ALL';
   $('#sheet').classList.add('wide');
   $('#m-title').textContent=isLines?'라인 아카이브':'레퍼런스 아카이브';
   $('#m-body').innerHTML=`
@@ -1133,6 +1157,7 @@ function openArchive(store){
     const seasons=[...new Set(state[store].map(x=>x.season).filter(Boolean))].sort();
     let h=grp('gender','성별',GENDER_OPTS,genderF)+grp('gcat','카테고리',GCAT_OPTS,gcatF)+grp('season','시즌',seasons,seasonF);
     if(!isLines){const tags=[...new Set(state.refs.flatMap(r=>r.tags||[]))].sort();if(tags.length)h+=grp('tag','태그',tags,tagF);}
+    if(!isLines&&canSecret())h+=`<div class="chipgroup"><span class="chiplabel">방</span><button class="togglepill ${secretF?'on':''}" data-axis="secret" data-val="t">🔒 소전팀만</button></div>`;
     chipsEl.innerHTML=h;
   }
   function list(){
@@ -1141,6 +1166,7 @@ function openArchive(store){
     if(gcatF!=='ALL')items=items.filter(x=>x.gcat===gcatF);
     if(seasonF!=='ALL')items=items.filter(x=>x.season===seasonF);
     if(!isLines&&tagF!=='ALL')items=items.filter(r=>(r.tags||[]).includes(tagF));
+    if(!isLines)items=items.filter(r=> secretF ? !!r.secret : !r.secret ); // 소전팀 방 분리
     if(q){const s=q.toLowerCase();items=items.filter(it=>((it.name||'')+' '+((it.tags||[]).join(' '))+' '+(it.season||'')+' '+(it.gender||'')+' '+(it.gcat||'')+' '+(it.category||'')+' '+(it.lifestyle||'')).toLowerCase().includes(s));}
     return items;
   }
@@ -1159,7 +1185,7 @@ function openArchive(store){
   }
   chips();render();
   $('#arch-q').addEventListener('input',e=>{q=e.target.value;render();});
-  chipsEl.addEventListener('click',e=>{const b=e.target.closest('[data-axis]');if(!b)return;const v=b.dataset.val,ax=b.dataset.axis;if(ax==='gender')genderF=v;else if(ax==='gcat')gcatF=v;else if(ax==='season')seasonF=v;else if(ax==='tag')tagF=v;chips();render();});
+  chipsEl.addEventListener('click',e=>{const b=e.target.closest('[data-axis]');if(!b)return;const v=b.dataset.val,ax=b.dataset.axis;if(ax==='gender')genderF=v;else if(ax==='gcat')gcatF=v;else if(ax==='season')seasonF=v;else if(ax==='tag')tagF=v;else if(ax==='secret')secretF=!secretF;chips();render();});
   gridEl.addEventListener('click',e=>{
     const c=e.target.closest('[data-aid]');if(!c)return;const id=c.dataset.aid;
     if(isLines)state.pick.line=state.pick.line===id?null:id;
@@ -1200,10 +1226,40 @@ function galleryGrid(){
   if(state.galFilter!=='all')items=items.filter(g=>g.season===state.galFilter);
   const seasons=[...new Set(state.gallery.map(g=>g.season))];
   $('#gal-filter').innerHTML=['all',...seasons].map(s=>`<button class="togglepill ${state.galFilter===s?'on':''}" data-filter="${s}">${s==='all'?'전체':esc(s)}</button>`).join('');
+  // 공유 툴바
+  const me=ownerId(),sb=$('#gal-sharebar');
+  if(sb){
+    if(!state.galSelMode){
+      sb.innerHTML=`<button class="btn sm" data-galselmode>선택</button><span class="hint" style="margin:0">내 생성물을 골라 다른 계정에 공유할 수 있어요</span>`;
+    }else{
+      sb.innerHTML=`<button class="btn sm" data-galselnone>선택 해제</button><button class="btn sm primary" data-galshare>↗ 선택 공유 (${state.galSel.size})</button><button class="btn sm" data-galselmode>완료</button><span class="hint" style="margin:0">내가 만든 것만 공유 가능</span>`;
+    }
+  }
   if(!items.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1">아직 생성물이 없습니다. 생성 탭에서 만들어보세요.</div>`;return;}
   const showLogo=$('#showlogo').checked;
-  grid.innerHTML=items.map(g=>{const tg=g.uploaded?[esc(g.season),'업로드'].filter(Boolean).join(' · '):`${esc(g.season)}${g.category?' · '+esc(g.category.parent):''} · S${g.sheer}/Sh${g.shimmer}${g.parentId?' · edit':''}`;
-    return`<div class="card" data-gid="${g.id}"><button class="x" data-galdel="${g.id}">✕</button><span class="thumb" style="background-image:url('${showLogo&&g.logoUrl?g.logoUrl:g.dataUrl}')"></span><div class="meta"><div class="nm">${esc(g.name)}</div><div class="tg">${tg}</div></div></div>`;}).join('');
+  grid.innerHTML=items.map(g=>{
+    const mine=(g.owner===me);
+    const tg=g.uploaded?[esc(g.season),'업로드'].filter(Boolean).join(' · '):`${esc(g.season)}${g.category?' · '+esc(g.category.parent):''}${g.parentId?' · edit':''}`;
+    const shared=mine&&(g.shareAll||(g.sharedWith&&g.sharedWith.length));
+    const shareDot=shared?`<span class="shdot" title="공유중${g.shareAll?' (전체)':' '+((g.sharedWith||[]).length)+'명'}"></span>`:'';
+    const recv=(!mine)?`<span class="recvbadge">↗ 공유받음</span>`:'';
+    const sel=state.galSelMode&&mine?`<span class="gsel ${state.galSel.has(g.id)?'on':''}" data-galsel="${g.id}">${state.galSel.has(g.id)?'✓':''}</span>`:'';
+    const delBtn=mine?`<button class="x" data-galdel="${g.id}">✕</button>`:'';
+    return`<div class="card ${state.galSelMode&&mine?'selectable':''}" data-gid="${g.id}">${delBtn}${recv}${sel}<span class="thumb" style="background-image:url('${showLogo&&g.logoUrl?g.logoUrl:g.dataUrl}')"></span><div class="meta"><div class="nm">${shareDot}${esc(g.name)}</div><div class="tg">${tg}</div></div></div>`;}).join('');
+}
+function shareGallerySelected(){
+  if(!state.galSel.size){toast('공유할 생성물을 먼저 선택하세요.');return;}
+  const to=prompt('공유할 계정 이메일 (쉼표로 여러 명).\n모든 로그인 사용자에게 공개하려면 "전체" 입력:');
+  if(to==null)return;const t=to.trim();if(!t)return;
+  const items=[...state.galSel].map(id=>state.gallery.find(g=>g.id===id)).filter(g=>g&&g.owner===ownerId());
+  (async()=>{
+    for(const g of items){
+      if(t==='전체'||t.toLowerCase()==='all'){g.shareAll=true;}
+      else{const ems=t.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);g.sharedWith=[...new Set([...(g.sharedWith||[]),...ems])];}
+      try{await storePut('gallery',g);}catch(e){toast('공유 저장 실패: '+e.message);}
+    }
+    toast(items.length+'장 공유됨');state.galSel.clear();state.galSelMode=false;galleryGrid();
+  })();
 }
 
 /* ---------- compare ---------- */
@@ -1419,7 +1475,7 @@ async function handleFiles(files,store){
     const m=parseName(f.name);if(m.ok)parsed++;
     const it={id:uid(),name:m.name,dataUrl:du,gender:pg||m.gender||'',gcat:pc||m.gcat||'',season:ps||m.season||'',createdAt:Date.now()};
     if(store==='lines'){it.category='';it.lifestyle='';}
-    if(store==='refs'){it.tags=[];}
+    if(store==='refs'){it.tags=[];if(state.refSecretView&&canSecret()){it.secret=true;it.secretOwner=authEmail();}}
     if(store==='fabrics')it.ftype='';
     state[store].push(it);await storePut(store,it);}
   libGrid(store);refreshCounts();renderPicks();
@@ -1501,14 +1557,19 @@ function wire(){
   document.addEventListener('click',async e=>{
     const del=e.target.closest('[data-del]');if(del){const st=del.dataset.store;await storeDel(st,del.dataset.del);state[st]=state[st].filter(x=>x.id!==del.dataset.del);libGrid(st);refreshCounts();renderPicks();return;}
     const gd=e.target.closest('[data-galdel]');if(gd){await storeDel('gallery',gd.dataset.galdel);state.gallery=state.gallery.filter(x=>x.id!==gd.dataset.galdel);galleryGrid();compareSelect();return;}
+    const gsm=e.target.closest('[data-galselmode]');if(gsm){state.galSelMode=!state.galSelMode;if(!state.galSelMode)state.galSel.clear();galleryGrid();return;}
+    const gsn=e.target.closest('[data-galselnone]');if(gsn){state.galSel.clear();galleryGrid();return;}
+    const gsh=e.target.closest('[data-galshare]');if(gsh){shareGallerySelected();return;}
+    const gs=e.target.closest('[data-galsel]');if(gs){const id=gs.dataset.galsel;state.galSel.has(id)?state.galSel.delete(id):state.galSel.add(id);galleryGrid();return;}
     const card=e.target.closest('#grid-lines .card, #grid-refs .card, #grid-fabrics .card, #grid-models .card');
     if(card&&!e.target.closest('.x')){const st=card.dataset.store;if((st==='lines'||st==='refs')&&state.libSelMode[st]){const set=state.libSel[st];set.has(card.dataset.id)?set.delete(card.dataset.id):set.add(card.dataset.id);libGrid(st);return;}openMeta(st,card.dataset.id);return;}
     const sm=e.target.closest('[data-selmode]');if(sm){const st=sm.dataset.selmode;state.libSelMode[st]=!state.libSelMode[st];if(!state.libSelMode[st])state.libSel[st].clear();libGrid(st);return;}
     const sall=e.target.closest('[data-selall]');if(sall){const st=sall.dataset.selall;state[st].filter(it=>matchFilter(st,it)).forEach(it=>state.libSel[st].add(it.id));libGrid(st);return;}
     const sclr=e.target.closest('[data-selclear]');if(sclr){const st=sclr.dataset.selclear;state.libSel[st].clear();libGrid(st);return;}
     const sap=e.target.closest('[data-selapply]');if(sap){await bulkApply(sap.dataset.selapply);return;}
-    const gcard=e.target.closest('#grid-gallery .card');if(gcard&&!e.target.closest('.x')){openEdit(gcard.dataset.gid);return;}
+    const gcard=e.target.closest('#grid-gallery .card');if(gcard&&!e.target.closest('.x')){const id=gcard.dataset.gid,g=state.gallery.find(x=>x.id===id);if(state.galSelMode&&g&&g.owner===ownerId()){state.galSel.has(id)?state.galSel.delete(id):state.galSel.add(id);galleryGrid();return;}openEdit(id);return;}
     const filt=e.target.closest('[data-filter]');if(filt){state.galFilter=filt.dataset.filter;galleryGrid();return;}
+    const rr=e.target.closest('[data-refroom]');if(rr){state.refSecretView=(rr.dataset.refroom==='sec');state.libSel.refs&&state.libSel.refs.clear();libGrid('refs');return;}
     const lc=e.target.closest('[data-libstore]');if(lc){state.libFilter[lc.dataset.libstore][lc.dataset.axis]=lc.dataset.val;libGrid(lc.dataset.libstore);return;}
     const arch=e.target.closest('[data-arch]');if(arch){openArchive(arch.dataset.arch);return;}
     const un=e.target.closest('[data-unpick]');if(un){const st=un.dataset.unpick,id=un.dataset.uid;if(st==='lines')state.pick.line=null;else state.pick.refs.delete(id);renderPicks();return;}
