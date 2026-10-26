@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v8</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v10</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -714,7 +714,7 @@ const CATEGORIES={
 const KEEP_OPTS=['model identity','face','hair','pose','background','top','outerwear','bottoms','skirt','dress','footwear','bag'];
 const REPLACE_OPTS=['outerwear','top','bottoms','skirt','dress','footwear'];
 const FABRIC_OPTS=['matte nylon','glossy nylon','silk-touch nylon','taffeta','velvet','wool blend'];
-const SEASONS=['27SS','27FW','28SS','28FW','29SS','29FW'];
+const SEASONS=['24SS','24FW','25SS','25FW','26SS','26FW','27SS','27FW','28SS','28FW','29SS','29FW'];
 const GENDER_OPTS=['WOMEN','MEN','UNISEX'];
 const GCAT_OPTS=['OUTER','TOP','BOTTOM','DRESS','ACC','SHOES'];
 const GENDER_MAP={women:'WOMEN',w:'WOMEN','여성':'WOMEN','우먼':'WOMEN','여':'WOMEN',men:'MEN',m:'MEN','남성':'MEN','맨':'MEN','남':'MEN',unisex:'UNISEX','공용':'UNISEX','유니섹스':'UNISEX'};
@@ -1476,7 +1476,7 @@ function openMeta(store,id){
   const clsFields=`<div class="row" style="margin-top:12px">
     <div style="flex:1"><label class="fld">성별</label><select id="me-gender" class="inp"><option value=""></option>${GENDER_OPTS.map(x=>`<option ${it.gender===x?'selected':''}>${x}</option>`).join('')}</select></div>
     <div style="flex:1"><label class="fld">카테고리</label><select id="me-gcat" class="inp"><option value=""></option>${GCAT_OPTS.map(x=>`<option ${it.gcat===x?'selected':''}>${x}</option>`).join('')}</select></div>
-    <div style="flex:1"><label class="fld">시즌</label><select id="me-season" class="inp"><option value=""></option>${SEASONS.map(s=>`<option ${it.season===s?'selected':''}>${s}</option>`).join('')}</select></div></div>`;
+    <div style="flex:1"><label class="fld">시즌</label><select id="me-season" class="inp"><option value=""></option>${[...new Set([...(it.season?[it.season]:[]),...SEASONS])].map(s=>`<option ${it.season===s?'selected':''}>${s}</option>`).join('')}</select></div></div>`;
   if(store==='lines')f+=clsFields+`<div class="row" style="margin-top:12px"><div style="flex:1"><label class="fld">세부(자유)</label><input id="me-cat" class="inp" value="${esc(it.category||'')}" placeholder="경량/Short/Long"></div><div style="flex:1"><label class="fld">라이프스타일</label><select id="me-life" class="inp"><option value=""></option>${['URBAN','ACTIVE WELLNESS','APRES-SKI'].map(x=>`<option ${it.lifestyle===x?'selected':''}>${x}</option>`).join('')}</select></div></div>`;
   if(store==='refs'){
     const allTags=[...new Set(state.refs.flatMap(r=>r.tags||[]))];
@@ -1576,9 +1576,10 @@ async function handleFiles(files,store){
   if(store==='__logo'||store==='__logoword'){let du=await fileToDataUrl(files[0]);du=await resizeDataUrl(du,600);if(store==='__logoword')state.settings.logoWord=du;else state.settings.logoBadge=du;await putOf('settings',state.settings);renderLogoPrev();toast('로고 저장됨');return;}
   if(store==='__gallery'){
     const arr=[...files].filter(f=>f.type.startsWith('image/'));let parsed=0;
+    const dcat=($('#cat-parent')&&$('#cat-parent').value)||'',dseason=($('#season')&&$('#season').value)||''; // 갤러리 업로드 기본값 = 생성탭 카테고리·시즌
     for(const f of arr){let du=await fileToDataUrl(f);du=await resizeDataUrl(du,1024);
       const m=parseName(f.name);if(m.ok)parsed++;
-      const g={id:uid(),name:m.name,dataUrl:du,logoUrl:du,season:m.season||'',gender:m.gender||'',gcat:m.gcat||'',uploaded:true,sourceLineId:null,parentId:null,createdAt:Date.now()};
+      const g={id:uid(),name:m.name,dataUrl:du,logoUrl:du,season:m.season||dseason||'',gender:m.gender||'',gcat:m.gcat||dcat||'',uploaded:true,owner:ownerId(),sourceLineId:null,parentId:null,createdAt:Date.now()};
       state.gallery.push(g);await storePut('gallery',g);}
     galleryGrid();compareSelect();
     toast(`${arr.length}장 갤러리에 추가${parsed?` · ${parsed}장 파일명 자동인식`:''}`);return;
