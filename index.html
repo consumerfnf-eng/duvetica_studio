@@ -276,7 +276,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
         <div class="panel">
           <div class="row" style="gap:12px">
             <div style="flex:1"><label class="fld">타깃 시즌 (기획)</label><select id="season" class="inp"></select></div>
-            <div style="flex:1"><label class="fld">카테고리</label><select id="cat-parent" class="inp"><option>OUTERWEAR</option><option>BOTTOMS</option></select></div>
+            <div style="flex:1"><label class="fld">카테고리</label><select id="cat-parent" class="inp"><option value="OUTERWEAR">OUTERWEAR</option><option value="TOP">TOP (작업중)</option><option value="BOTTOMS">BOTTOMS (작업중)</option><option value="SKIRT">SKIRT (작업중)</option><option value="DRESS">DRESS (작업중)</option></select></div>
             <div style="flex:1.2"><label class="fld">서브</label><select id="cat-sub" class="inp"></select></div>
           </div>
           <div class="sectlabel">1 · 베이스 라인 <span id="prevlabel" class="chip pine"></span> <span class="hint" style="margin:0">— 모델·포즈·나머지 스타일링을 유지할 원본</span></div>
@@ -331,7 +331,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 
           <div class="sectlabel">소재 / FABRIC</div>
           <div class="pillrow" id="fabric-pills"></div>
-          <div class="slider-wrap">
+          <div class="slider-wrap" id="sheer-wrap">
             <div class="slider-head"><span class="lab">Sheer 시스루</span><span class="val" id="sheer-v">20</span></div>
             <input type="range" id="sheer" min="0" max="100" value="20"><div class="slider-hint" id="sheer-h"></div>
           </div>
@@ -342,7 +342,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 
           <label class="row" id="logogen-wrap" style="font-size:12px;color:var(--ink-70);gap:6px;margin-top:14px;align-items:flex-start">
             <input type="checkbox" id="logo-generate" style="margin-top:2px">
-            <span>DUVETICA 로고 생성에 포함 <span style="color:var(--ink-45)">— 켜면 착용자 왼가슴에 정품 5각 배지(톤온톤)를 생성 단계에서 그려 넣습니다. 끄면 무지로 생성 후 갤러리에서 로고 후처리 합성.</span></span>
+            <span>DUVETICA 로고 생성에 포함 <span style="color:var(--ink-45)">— 켜면 착용자 왼가슴에 정품 배지(가로 방패형·톤온톤)를 생성 단계에서 그려 넣습니다. 끄면 무지로 생성 후 갤러리에서 로고 후처리 합성.</span></span>
           </label>
 
           <div style="margin-top:16px"><label class="fld">추가 디렉션 (선택)</label>
@@ -647,17 +647,41 @@ const CATEGORIES={
     adoptOpts:['silhouette','neckline','collar','drape/scarf','hood','sleeve','quilting','length','closure','material surface','waist','pockets','trim','drawcord/string','belt','zipper pull','hardware'],
     schema:'{"silhouette":"","length":"","neckline":"","collar":"","sleeve":"","quilting":{"type":"","scale":"","puffiness":""},"waist":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',length:'',neckline:'',collar:'',sleeve:'',quilting:{type:'',scale:'',puffiness:''},waist:'',pocket:'',material:matDefault()})},
+  TOP:{noun:'top',
+    subs:['KNIT PULLOVER','CARDIGAN','SWEATSHIRT','HOODIE','SHIRT','BLOUSE','T-SHIRT','KNIT VEST'],
+    keepDefault:['model identity','face','hair','pose','background','bottoms','outerwear','footwear'],
+    replaceDefault:['top'],
+    adoptDefault:['silhouette','neckline','sleeve'],
+    adoptOpts:['silhouette','neckline','collar','sleeve','length','fit','cuff','hem','placket','material surface','trim','pockets','hardware'],
+    schema:'{"silhouette":"","neckline":"","collar":"","sleeve":"","length":"","fit":"","cuff":"","hem":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',neckline:'',collar:'',sleeve:'',length:'',fit:'',cuff:'',hem:'',material:matDefault()})},
   BOTTOMS:{noun:'bottoms',
-    subs:['LEGGINGS','WIDE PANTS','STRAIGHT PANTS','SKIRT','SHORTS','JOGGER'],
+    subs:['WIDE PANTS','STRAIGHT PANTS','TAPERED PANTS','LEGGINGS','SHORTS','JOGGER','CARGO PANTS'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
     replaceDefault:['bottoms'],
     adoptDefault:['silhouette','leg shape','length'],
-    adoptOpts:['silhouette','rise','leg shape','length','waist','material surface','pockets','drawcord/string','belt','hardware'],
-    schema:'{"silhouette":"","rise":"","leg":"","length":"","waist":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
-    attrs:()=>({silhouette:'',rise:'',leg:'',length:'',waist:'',pocket:'',material:matDefault()})}
+    adoptOpts:['silhouette','rise','leg shape','length','waist','hem','pleats','material surface','pockets','drawcord/string','belt','hardware'],
+    schema:'{"silhouette":"","rise":"","leg":"","length":"","waist":"","hem":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',rise:'',leg:'',length:'',waist:'',hem:'',pocket:'',material:matDefault()})},
+  SKIRT:{noun:'skirt',
+    subs:['MINI SKIRT','MIDI SKIRT','LONG SKIRT','PLEATED SKIRT','A-LINE SKIRT','PENCIL SKIRT','WRAP SKIRT'],
+    keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
+    replaceDefault:['skirt'],
+    adoptDefault:['silhouette','length','waist'],
+    adoptOpts:['silhouette','length','waist','pleats','slit','hem','drape','material surface','pockets','belt','closure','hardware'],
+    schema:'{"silhouette":"","length":"","waist":"","pleats":"","slit":"","hem":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',length:'',waist:'',pleats:'',slit:'',hem:'',material:matDefault()})},
+  DRESS:{noun:'dress',
+    subs:['MINI DRESS','MIDI DRESS','LONG DRESS','SHIRT DRESS','KNIT DRESS','SLIP DRESS','PADDED DRESS'],
+    keepDefault:['model identity','face','hair','pose','background','outerwear','footwear'],
+    replaceDefault:['dress'],
+    adoptDefault:['silhouette','neckline','length'],
+    adoptOpts:['silhouette','neckline','collar','sleeve','length','waist','skirt shape','pleats','slit','drape','material surface','trim','closure','hardware'],
+    schema:'{"silhouette":"","neckline":"","collar":"","sleeve":"","length":"","waist":"","skirt_shape":"","pleats":"","slit":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',neckline:'',collar:'',sleeve:'',length:'',waist:'',skirt_shape:'',pleats:'',slit:'',material:matDefault()})}
 };
-const KEEP_OPTS=['model identity','face','hair','pose','background','top','outerwear','bottoms','footwear','bag'];
-const REPLACE_OPTS=['outerwear','top','bottoms','footwear'];
+const KEEP_OPTS=['model identity','face','hair','pose','background','top','outerwear','bottoms','skirt','dress','footwear','bag'];
+const REPLACE_OPTS=['outerwear','top','bottoms','skirt','dress','footwear'];
 const FABRIC_OPTS=['matte nylon','glossy nylon','silk-touch nylon','taffeta','velvet','wool blend'];
 const SEASONS=['27SS','27FW','28SS','28FW','29SS','29FW'];
 const GENDER_OPTS=['WOMEN','MEN','UNISEX'];
@@ -818,7 +842,7 @@ function buildDesignJSON(){
     design_balance:+$('#balance').value/100,
     ref_mix:(plan.refs&&plan.refs.length>=2)?(+($('#refmix')?$('#refmix').value:50)/100):null,
     color:{source:colorSrcFromBal($('#color-bal')?+$('#color-bal').value:100),new_text:($('#color-new')&&$('#color-new').value.trim())||''},
-    branding:{brand:'DUVETICA',logo_on:!!(($('#logo-generate')&&$('#logo-generate').checked)),logo:'authentic DUVETICA badge — wide rounded-rectangle plaque with a shallow centre point on the bottom edge, wearer left chest, tone-on-tone',logo_position:'upper left chest (wearer left)',logo_scale:'small refined 5-6cm'},
+    branding:{brand:'DUVETICA',logo_on:!!($('#logo-generate')&&$('#logo-generate').checked&&$('#logogen-wrap')&&$('#logogen-wrap').style.display!=='none'),logo:'authentic DUVETICA badge — wide rounded-rectangle plaque with a shallow centre point on the bottom edge, wearer left chest, tone-on-tone',logo_position:'upper left chest (wearer left)',logo_scale:'small refined 5-6cm'},
     priority:{model:plan.model?'model reference':'base image',garment_structure:'reference image',brand_rules:'DUVETICA DNA'},
     notes:$('#extra').value.trim()
   };
@@ -830,9 +854,12 @@ function refreshJSON(force){if(state.jsonDirty&&!force){updatePromptPrev();retur
 function garmentParts(cat,g){
   const parts=[`category ${cat.parent||''} / ${cat.sub||''}`.trim()];
   const add=(k,lab)=>{if(g[k])parts.push(`${lab||k} ${g[k]}`);};
-  add('silhouette');add('length');
+  add('silhouette');add('length');add('fit');
   if(cat.parent==='OUTERWEAR'){add('neckline');add('collar');add('sleeve');const q=g.quilting||{};const qd=[q.type,q.scale&&q.scale+' scale',q.puffiness&&q.puffiness+' volume'].filter(Boolean).join(', ');if(qd)parts.push('quilting '+qd);}
-  if(cat.parent==='BOTTOMS'){add('rise');add('leg','leg shape');}
+  if(cat.parent==='TOP'){add('neckline');add('collar');add('sleeve');add('cuff');add('hem');}
+  if(cat.parent==='BOTTOMS'){add('rise');add('leg','leg shape');add('hem');add('pleats');}
+  if(cat.parent==='SKIRT'){add('pleats');add('slit');add('hem');add('drape');}
+  if(cat.parent==='DRESS'){add('neckline');add('collar');add('sleeve');add('skirt_shape','skirt shape');add('pleats');add('slit');}
   add('waist');add('pocket','pockets');
   return parts;
 }
@@ -843,6 +870,7 @@ function jsonToPrompt(J,plan){
   const dna=state.settings.brandDNA?`[DUVETICA DESIGN DNA] ${state.settings.brandDNA.replace(/\s+/g,' ').trim()}`:'';
   S.push(`Full-body premium DUVETICA fashion lookbook photograph for the ${J.target_season||'27FW'} season.`);
   if(dna)S.push(dna);
+  if(cat.parent&&cat.parent!=='OUTERWEAR')S.push(`CATEGORY NOTE — this is a ${noun}, NOT outerwear. Apply the DUVETICA premium aesthetic (clean construction, refined materials, modern proportions) but do NOT add down insulation, puffer padding or quilting unless it is explicitly part of the requested design.`);
   if(mode==='image'){
     S.push(`Show the EXACT person from image 1 — keep their face, hair, skin tone and body identical — now wearing a newly designed DUVETICA ${noun}. Do not change who the person is; this is a dressing/try-on task.`);
     S.push(`${noun.toUpperCase()} DESIGN — construct the new ${noun} from image 2 (the DUVETICA base form) together with the reference image(s), balanced per DESIGN BALANCE below.`);
@@ -1158,7 +1186,10 @@ function applyCategory(reset){
   const parent=$('#cat-parent').value,C=CATEGORIES[parent];
   $('#cat-sub').innerHTML=C.subs.map(s=>`<option>${s}</option>`).join('');
   $('#cat-tag').textContent=`· ${C.noun} 기준`;
-
+  // 카테고리별 사이드 툴 노출: Sheer(시스루)=바지 제외, 가슴 로고=하의/스커트 제외
+  const show=(id,on)=>{const el=$(id);if(el)el.style.display=on?'':'none';};
+  show('#sheer-wrap', parent!=='BOTTOMS');
+  show('#logogen-wrap', parent==='OUTERWEAR'||parent==='TOP'||parent==='DRESS');
   if(reset){state.brief.keep=new Set(C.keepDefault);state.brief.replace=new Set(C.replaceDefault);state.brief.adopt=new Set(C.adoptDefault);state.aiAttrs={};}
   renderPills();refreshJSON(true);
 }
