@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v8</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v10</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -293,7 +293,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
         <div class="panel">
           <div class="row" style="gap:12px">
             <div style="flex:1"><label class="fld">타깃 시즌 (기획)</label><select id="season" class="inp"></select></div>
-            <div style="flex:1"><label class="fld">카테고리</label><select id="cat-parent" class="inp"><option value="OUTERWEAR">OUTERWEAR</option><option value="TOP">TOP</option><option value="BOTTOMS">BOTTOMS (작업중)</option><option value="SKIRT">SKIRT</option><option value="DRESS">DRESS (작업중)</option></select></div>
+            <div style="flex:1"><label class="fld">카테고리</label><select id="cat-parent" class="inp"><option value="OUTERWEAR">OUTERWEAR</option><option value="TOP">TOP</option><option value="PANTS">PANTS</option><option value="SHORTS">SHORTS</option><option value="SKIRT">SKIRT</option><option value="DRESS">DRESS (작업중)</option></select></div>
             <div style="flex:1.2"><label class="fld">서브</label><select id="cat-sub" class="inp"></select></div>
           </div>
           <div class="sectlabel">1 · 베이스 라인 <span id="prevlabel" class="chip pine"></span> <span class="hint" style="margin:0">— 모델·포즈·나머지 스타일링을 유지할 원본</span></div>
@@ -713,14 +713,22 @@ const CATEGORIES={
     adoptOpts:['silhouette','neckline','collar','sleeve','length','fit','cuff','hem','placket','material surface','trim','pockets','hardware'],
     schema:'{"silhouette":"","neckline":"","collar":"","sleeve":"","length":"","fit":"","cuff":"","hem":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',neckline:'',collar:'',sleeve:'',length:'',fit:'',cuff:'',hem:'',material:matDefault()})},
-  BOTTOMS:{noun:'bottoms',
-    subs:['WIDE PANTS','STRAIGHT PANTS','TAPERED PANTS','LEGGINGS','MICRO SHORTS','SHORT SHORTS','BERMUDA SHORTS','KNEE SHORTS','JOGGER','CARGO PANTS'],
+  PANTS:{noun:'pants',
+    subs:['WIDE PANTS','SLIM PANTS','SKINNY PANTS','TAPERED PANTS','BALLOON PANTS','CARGO PANTS','LEGGINGS','CAPRI PANTS'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
     replaceDefault:['bottoms'],
     adoptDefault:['silhouette','leg shape','length'],
     adoptOpts:['silhouette','rise','leg shape','length','waist','hem','pleats','material surface','pockets','drawcord/string','belt','hardware'],
     schema:'{"silhouette":"","rise":"","leg":"","length":"","waist":"","hem":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',rise:'',leg:'',length:'',waist:'',hem:'',pocket:'',material:matDefault()})},
+  SHORTS:{noun:'shorts',
+    subs:['MICRO SHORTS','SHORT SHORTS','BERMUDA SHORTS','KNEE SHORTS','CARGO SHORTS','BIKER SHORTS'],
+    keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
+    replaceDefault:['bottoms'],
+    adoptDefault:['silhouette','length'],
+    adoptOpts:['silhouette','rise','length','waist','hem','material surface','pockets','drawcord/string','belt','hardware'],
+    schema:'{"silhouette":"","rise":"","length":"","waist":"","hem":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
+    attrs:()=>({silhouette:'',rise:'',length:'',waist:'',hem:'',pocket:'',material:matDefault()})},
   SKIRT:{noun:'skirt',
     subs:['MINI SKIRT','MIDI SKIRT','LONG SKIRT','PLEATED SKIRT','A-LINE SKIRT','PENCIL SKIRT','WRAP SKIRT'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
@@ -936,22 +944,39 @@ function subDirective(parent,sub){
   if(/MINI/.test(s))L.push('MINI length — very short, the hem sits high on the upper thigh, clearly well above the knee and noticeably shorter than mid-thigh');
   if(/MIDI/.test(s))L.push('MIDI length — hem hitting around the MIDDLE OF THE KNEE (knee-length), not down at the calf or ankle');
   if(/(^|\s)LONG|MAXI|LONG\s/.test(s))L.push('LONG / maxi length — hem ending at the ankle (about 10% shorter than full floor-length, NOT pooling or touching the floor)');
+  // --- SHORTS (쇼츠 기장) ---
   if(/MICRO\s?SHORTS/.test(s))L.push('micro shorts — very short, hem high on the upper thigh (hot-pants length)');
   else if(/SHORT\s?SHORTS/.test(s))L.push('short shorts — mid-thigh hem');
   else if(/BERMUDA/.test(s))L.push('bermuda shorts — hem just above the knee');
   else if(/KNEE\s?SHORTS/.test(s))L.push('knee-length shorts — hem at the knee');
-  else if(/SHORTS/.test(s))L.push('shorts — upper-thigh hem');
+  else if(/CARGO\s?SHORTS/.test(s))L.push('cargo shorts — knee-area hem with utility cargo pockets');
+  else if(/BIKER\s?SHORTS/.test(s))L.push('biker shorts — tight fitted shorts ending mid-thigh');
+  else if(parent==='SHORTS')L.push('shorts — mid-thigh hem');
   if(/CROP/.test(s))L.push('cropped — ends at or above the waist');
   if(/PLEAT/.test(s))L.push('fully pleated construction with crisp knife pleats');
   if(/A-?LINE/.test(s))L.push('A-line flared silhouette');
   if(/PENCIL/.test(s))L.push('slim straight pencil silhouette');
   if(/WRAP/.test(s))L.push('wrap-front construction');
-  if(/WIDE/.test(s))L.push('wide-leg silhouette');
+  // --- PANTS (바지 실루엣 + 기장) ---
+  if(parent==='PANTS'){
+    if(/CAPRI/.test(s))L.push('CAPRI length — cropped pants ending BELOW the knee, around the upper-to-mid calf (clearly longer than knee-length, clearly shorter than the ankle)');
+    else if(/LEGGINGS/.test(s))L.push('full-length to the ankle');
+    else L.push('FULL-LENGTH pants reaching the ankle (not cropped unless specified)');
+    if(/WIDE/.test(s))L.push('WIDE-leg silhouette — loose, flowing wide legs from hip to hem');
+    else if(/SKINNY/.test(s))L.push('SKINNY silhouette — very tight, body-hugging through hip, thigh and calf');
+    else if(/SLIM/.test(s))L.push('SLIM silhouette — fitted but not skin-tight, narrow clean leg');
+    else if(/TAPER/.test(s))L.push('TAPERED silhouette — roomier at the hip/thigh, narrowing toward the ankle');
+    else if(/BALLOON/.test(s))L.push('BALLOON silhouette — rounded voluminous curved legs, full and puffed through the thigh and knee then gathered/tapered in at the ankle hem');
+    else if(/CARGO/.test(s))L.push('relaxed straight cargo silhouette, FULL-LENGTH to the ankle, with utility cargo pockets on the thighs');
+    else if(/LEGGINGS/.test(s))L.push('tight body-hugging leggings fit, stretch fabric');
+    else if(/CAPRI/.test(s))L.push('slim-to-straight capri leg');
+  }
+  if(/WIDE/.test(s)&&parent!=='PANTS')L.push('wide-leg silhouette');
   if(/STRAIGHT/.test(s))L.push('straight-leg silhouette');
-  if(/TAPER/.test(s))L.push('tapered-leg silhouette');
+  if(/TAPER/.test(s)&&parent!=='PANTS')L.push('tapered-leg silhouette');
   if(/JOGGER/.test(s))L.push('jogger with elastic drawcord cuffed hems');
-  if(/CARGO/.test(s))L.push('cargo utility pockets');
-  if(/LEGGINGS/.test(s))L.push('tight body-hugging leggings fit');
+  if(/CARGO/.test(s)&&parent!=='PANTS'&&parent!=='SHORTS')L.push('cargo utility pockets');
+  if(/LEGGINGS/.test(s)&&parent!=='PANTS')L.push('tight body-hugging leggings fit');
   if(/SLIP/.test(s))L.push('slip-dress silhouette with thin shoulder straps');
   if(/SHIRT\s?DRESS|SHIRTDRESS/.test(s))L.push('shirt-dress with a full button placket and collar');
   if(/KNIT/.test(s))L.push('knitted fabric construction');
@@ -968,7 +993,8 @@ function garmentParts(cat,g){
   add('silhouette');add('length');add('fit');
   if(cat.parent==='OUTERWEAR'){add('neckline');add('collar');add('sleeve');const q=g.quilting||{};const qd=[q.type,q.scale&&q.scale+' scale',q.puffiness&&q.puffiness+' volume'].filter(Boolean).join(', ');if(qd)parts.push('quilting '+qd);}
   if(cat.parent==='TOP'){add('neckline');add('collar');add('sleeve');add('cuff');add('hem');}
-  if(cat.parent==='BOTTOMS'){add('rise');add('leg','leg shape');add('hem');add('pleats');}
+  if(cat.parent==='PANTS'){add('rise');add('leg','leg shape');add('hem');add('pleats');}
+  if(cat.parent==='SHORTS'){add('rise');add('hem');}
   if(cat.parent==='SKIRT'){add('pleats');add('slit');add('hem');add('drape');}
   if(cat.parent==='DRESS'){add('neckline');add('collar');add('sleeve');add('skirt_shape','skirt shape');add('pleats');add('slit');}
   add('waist');add('pocket','pockets');
@@ -1336,7 +1362,7 @@ function applyCategory(reset){
   $('#cat-tag').textContent=`· ${C.noun} 기준`;
   // 카테고리별 사이드 툴 노출: Sheer(시스루)=바지 제외, 가슴 로고=하의/스커트 제외
   const show=(id,on)=>{const el=$(id);if(el)el.style.display=on?'':'none';};
-  show('#sheer-wrap', parent!=='BOTTOMS');
+  show('#sheer-wrap', parent!=='PANTS'&&parent!=='SHORTS');
   show('#logogen-wrap', parent==='OUTERWEAR'||parent==='TOP'||parent==='DRESS');
   if(reset){state.brief.keep=new Set(C.keepDefault);state.brief.replace=new Set(C.replaceDefault);state.brief.adopt=new Set(C.adoptDefault);state.aiAttrs={};}
   renderPills();refreshJSON(true);
