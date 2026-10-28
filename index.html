@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v3</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v5</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -706,7 +706,7 @@ const CATEGORIES={
     schema:'{"silhouette":"","length":"","neckline":"","collar":"","sleeve":"","quilting":{"type":"","scale":"","puffiness":""},"waist":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',length:'',neckline:'',collar:'',sleeve:'',quilting:{type:'',scale:'',puffiness:''},waist:'',pocket:'',material:matDefault()})},
   TOP:{noun:'top',
-    subs:['KNIT PULLOVER','CARDIGAN','SWEATSHIRT','HOODIE','SHIRT','BLOUSE','T-SHIRT','KNIT VEST'],
+    subs:['FULLZIP','HOODIE','SWEATSHIRTS','HALFZIP SWEATSHIRTS','KNIT PULLOVER','KNIT CARDIGAN','LONGSLEEVE TSHIRTS','SHORTSLEEVE TSHIRTS','POLO TSHIRTS','SLEEVELESS'],
     keepDefault:['model identity','face','hair','pose','background','bottoms','outerwear','footwear'],
     replaceDefault:['top'],
     adoptDefault:['silhouette','neckline','sleeve'],
@@ -714,7 +714,8 @@ const CATEGORIES={
     schema:'{"silhouette":"","neckline":"","collar":"","sleeve":"","length":"","fit":"","cuff":"","hem":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',neckline:'',collar:'',sleeve:'',length:'',fit:'',cuff:'',hem:'',material:matDefault()})},
   PANTS:{noun:'pants',
-    subs:['WIDE PANTS','SLIM PANTS','SKINNY PANTS','TAPERED PANTS','BALLOON PANTS','CARGO PANTS','LEGGINGS','CAPRI PANTS'],
+    subs:['WIDE','BOOTSCUT','JOGGER','SLIM'],
+    secretSubs:['SKINNY','TAPERED','BALLOON','CARGO','LEGGINGS','CAPRI'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
     replaceDefault:['bottoms'],
     adoptDefault:['silhouette','leg shape','length'],
@@ -722,7 +723,8 @@ const CATEGORIES={
     schema:'{"silhouette":"","rise":"","leg":"","length":"","waist":"","hem":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',rise:'',leg:'',length:'',waist:'',hem:'',pocket:'',material:matDefault()})},
   SHORTS:{noun:'shorts',
-    subs:['MICRO SHORTS','SHORT SHORTS','BERMUDA SHORTS','KNEE SHORTS','CARGO SHORTS','BIKER SHORTS'],
+    subs:['SHORTS','BERMUDA SHORTS','BIKER SHORTS'],
+    secretSubs:['MICRO SHORTS','SHORT SHORTS','KNEE SHORTS','CARGO SHORTS'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
     replaceDefault:['bottoms'],
     adoptDefault:['silhouette','length'],
@@ -730,7 +732,8 @@ const CATEGORIES={
     schema:'{"silhouette":"","rise":"","length":"","waist":"","hem":"","pocket":"","material":{"fabric_type":"","surface":"","finish":""}}',
     attrs:()=>({silhouette:'',rise:'',length:'',waist:'',hem:'',pocket:'',material:matDefault()})},
   SKIRT:{noun:'skirt',
-    subs:['MINI SKIRT','MIDI SKIRT','LONG SKIRT','PLEATED SKIRT','A-LINE SKIRT','PENCIL SKIRT','WRAP SKIRT'],
+    subs:['MINI SKIRT','MIDI SKIRT','LONG SKIRT'],
+    secretSubs:['PLEATED SKIRT','A-LINE SKIRT','PENCIL SKIRT','WRAP SKIRT'],
     keepDefault:['model identity','face','hair','pose','background','top','outerwear','footwear'],
     replaceDefault:['skirt'],
     adoptDefault:['silhouette','length','waist'],
@@ -941,9 +944,9 @@ function refreshJSON(force){if(state.jsonDirty&&!force){updatePromptPrev();retur
 // 서브 타입 → 강한 기장·실루엣 지시(레퍼보다 우선)
 function subDirective(parent,sub){
   const s=(sub||'').toUpperCase();const L=[];
-  if(/MINI/.test(s))L.push('MINI length — very short, the hem sits high on the upper thigh, clearly well above the knee and noticeably shorter than mid-thigh');
-  if(/MIDI/.test(s))L.push('MIDI length — hem hitting around the MIDDLE OF THE KNEE (knee-length), not down at the calf or ankle');
-  if(/(^|\s)LONG|MAXI|LONG\s/.test(s))L.push('LONG / maxi length — hem ending at the ankle (about 10% shorter than full floor-length, NOT pooling or touching the floor)');
+  if(/MINI/.test(s)&&(parent==='SKIRT'||parent==='DRESS'))L.push('MINI length — very short, the hem sits high on the upper thigh, clearly well above the knee and noticeably shorter than mid-thigh');
+  if(/MIDI/.test(s)&&(parent==='SKIRT'||parent==='DRESS'))L.push('MIDI length — hem hitting around the MIDDLE OF THE KNEE (knee-length), not down at the calf or ankle');
+  if((/(^|\s)LONG|MAXI/.test(s))&&!/LONG\s?SLEEVE/.test(s)&&(parent==='SKIRT'||parent==='DRESS'))L.push('LONG / maxi length — hem ending at the ankle (about 10% shorter than full floor-length, NOT pooling or touching the floor)');
   // --- SHORTS (쇼츠 기장) ---
   if(/MICRO\s?SHORTS/.test(s))L.push('micro shorts — extremely short hot-pants: hem sits very high on the upper thigh (about 10% shorter than standard short-shorts), with the SIDE SEAM cut noticeably higher than the front/back so the outer thigh is more exposed (high-cut side)');
   else if(/SHORT\s?SHORTS/.test(s))L.push('short shorts — mid-thigh hem');
@@ -979,12 +982,24 @@ function subDirective(parent,sub){
   if(/LEGGINGS/.test(s)&&parent!=='PANTS')L.push('tight body-hugging leggings fit');
   if(/SLIP/.test(s))L.push('slip-dress silhouette with thin shoulder straps');
   if(/SHIRT\s?DRESS|SHIRTDRESS/.test(s))L.push('shirt-dress with a full button placket and collar');
-  if(/KNIT/.test(s))L.push('knitted fabric construction');
-  if(/HOOD/.test(s))L.push('with an attached hood');
+  // --- PANTS: BOOTSCUT 추가 ---
+  if(parent==='PANTS'&&/BOOTS?CUT/.test(s))L.push('BOOTCUT silhouette — fitted through the hip and thigh, then flaring out gently from the knee down to a wide ankle opening; FULL-LENGTH reaching the top of the foot');
+  // --- TOP (상의 종류별) ---
+  if(parent==='TOP'){
+    if(/FULL\s?ZIP/.test(s))L.push('FULL-ZIP top — a sweatshirt/jersey jacket with a full-length centre-front zipper running from hem to collar, ribbed cuffs and hem, casual athletic-premium look');
+    else if(/HALF\s?ZIP/.test(s))L.push('HALF-ZIP sweatshirt — pullover sweatshirt with a short zipper only at the upper chest/neck (quarter-zip), stand collar, ribbed cuffs and hem');
+    else if(/HOOD/.test(s))L.push('HOODIE — pullover hooded sweatshirt with an attached drawstring hood, ribbed cuffs and hem, relaxed casual fit');
+    else if(/SWEATSHIRT/.test(s))L.push('SWEATSHIRT — crew-neck pullover sweatshirt in brushed fleece, ribbed crew neckline, cuffs and hem, relaxed fit');
+    else if(/KNIT\s?PULLOVER/.test(s))L.push('KNIT PULLOVER — fine-to-mid gauge knitted sweater, pullover (no opening), clean neckline, soft premium knit');
+    else if(/KNIT\s?CARDIGAN|CARDIGAN/.test(s))L.push('KNIT CARDIGAN — open-front knitted cardigan with a full button placket down the centre front');
+    else if(/POLO/.test(s))L.push('POLO shirt — knit/jersey polo with a flat ribbed collar and a short 2-3 button placket at the neck');
+    else if(/LONG\s?SLEEVE/.test(s))L.push('LONG-SLEEVE t-shirt — fitted jersey tee with FULL-LENGTH long sleeves reaching the wrist');
+    else if(/SHORT\s?SLEEVE/.test(s))L.push('SHORT-SLEEVE t-shirt — jersey tee with short sleeves ending at the upper arm');
+    else if(/SLEEVELESS/.test(s))L.push('SLEEVELESS top — a top with NO sleeves at all (bare arms/shoulders), clean armholes');
+  }
+  if(/KNIT/.test(s)&&parent!=='TOP')L.push('knitted fabric construction');
+  if(/HOOD/.test(s)&&parent!=='TOP')L.push('with an attached hood');
   if(/VEST/.test(s)&&parent!=='OUTERWEAR')L.push('sleeveless vest, no sleeves');
-  if(/CARDIGAN/.test(s))L.push('open-front cardigan with button placket');
-  if(/BLOUSE|SHIRT/.test(s)&&parent==='TOP')L.push('woven shirt/blouse with collar and button placket');
-  if(/T-?SHIRT/.test(s))L.push('short-sleeve t-shirt');
   return L.join('; ');
 }
 function garmentParts(cat,g){
@@ -1034,10 +1049,12 @@ function jsonToPrompt(J,plan){
   else if(sv==='varied')S.push(`STYLING VARIATION — freely restyle the full look into a fresh premium editorial: distinctly different footwear, different coordinating pieces (bottoms / top / accessories as appropriate), a different pose, framing and background lighting mood. Keep ONLY the hero ${noun} and the DUVETICA aesthetic; do NOT reuse the base image's boots, shoes, accessories or pose.`);
   // 배경은 항상 스튜디오가 기본 — 레퍼런스(런웨이·군중·거리)의 배경은 절대 사용하지 않음 (preserve 모드 제외)
   if(mode!=='preserve')S.push(`SCENE / BACKGROUND — ALWAYS place the subject on a plain, seamless studio background (soft neutral light grey to off-white) with clean even editorial lighting and no props. NEVER use, copy or recreate the background, setting, runway, show venue, crowd, audience, street or floor from the reference image(s) — the references are ONLY for the garment design. Full-length studio lookbook framing.`);
-  // 서브 카테고리를 '강제 규칙'으로 — 레퍼런스보다 우선하는 옷 종류·기장·실루엣
+  // 서브 지정 시 '강제 규칙'(레퍼보다 우선). '지정 안 함'(빈 값)이면 타입을 강제하지 않고 레퍼/디자인에 맡김.
   if(cat.sub){
     const sd=subDirective(cat.parent,cat.sub);
     S.push(`GARMENT TYPE — MANDATORY: the result MUST be a ${cat.sub} (${noun}).${sd?' '+sd+'.':''} This garment TYPE, LENGTH and SILHOUETTE take priority over the references — adopt design DETAILS (collar, pleats, trims, colour mood) from the references, but keep the ${cat.sub} type and its length exactly; do NOT copy the reference's length or overall shape if it differs from a ${cat.sub}.`);
+  }else{
+    S.push(`GARMENT TYPE — the piece is a ${noun} (keep it within the ${(cat.parent||'').toLowerCase()} category), but no specific sub-type is fixed: follow the base/reference design and silhouette freely.`);
   }
   const m=g.material||{},md=[];
   if(m.fabric_type)md.push(`${m.fabric_type} shell`);
@@ -1358,7 +1375,11 @@ function renderPills(){
 }
 function applyCategory(reset){
   const parent=$('#cat-parent').value,C=CATEGORIES[parent];
-  $('#cat-sub').innerHTML=C.subs.map(s=>`<option>${s}</option>`).join('');
+  // 서브 기본값 = '지정 안 함'(빈 값). 선택하면 그 타입이 강제 적용됨.
+  // 제외건 서브(SKINNY·CAPRI 등)는 jisoo07·jin 계정에만 노출, 라벨에 '(제외건)' 표기
+  let subOpts=['<option value="">— 지정 안 함 —</option>'].concat(C.subs.map(s=>`<option value="${s}">${s}</option>`));
+  if(C.secretSubs&&canSecret())subOpts=subOpts.concat(C.secretSubs.map(s=>`<option value="${s}">${s} (제외건)</option>`));
+  $('#cat-sub').innerHTML=subOpts.join('');
   $('#cat-tag').textContent=`· ${C.noun} 기준`;
   // 카테고리별 사이드 툴 노출: Sheer(시스루)=바지 제외, 가슴 로고=하의/스커트 제외
   const show=(id,on)=>{const el=$(id);if(el)el.style.display=on?'':'none';};
