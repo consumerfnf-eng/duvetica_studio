@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v5</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v6</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -295,6 +295,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
             <div style="flex:1"><label class="fld">타깃 시즌 (기획)</label><select id="season" class="inp"></select></div>
             <div style="flex:1"><label class="fld">카테고리</label><select id="cat-parent" class="inp"><option value="OUTERWEAR">OUTERWEAR</option><option value="TOP">TOP</option><option value="PANTS">PANTS</option><option value="SHORTS">SHORTS</option><option value="SKIRT">SKIRT</option><option value="DRESS">DRESS (작업중)</option></select></div>
             <div style="flex:1.2"><label class="fld">서브</label><select id="cat-sub" class="inp"></select></div>
+            <div style="flex:1" id="rise-wrap"><label class="fld">허리 높이</label><select id="cat-rise" class="inp"><option value="mid" selected>미디움 (기본)</option><option value="high">하이웨이스트</option><option value="low">로우라이즈</option></select></div>
           </div>
           <div class="sectlabel">1 · 베이스 라인 <span id="prevlabel" class="chip pine"></span> <span class="hint" style="margin:0">— 모델·포즈·나머지 스타일링을 유지할 원본</span></div>
           <div id="pick-lines" class="pickbar"></div>
@@ -909,6 +910,8 @@ function buildDesignJSON(){
   const parent=$('#cat-parent').value, sub=$('#cat-sub').value, C=CATEGORIES[parent];
   let g=C.attrs();
   deepFill(g,state.aiAttrs.garment);
+  // 허리 높이(PANTS/SHORTS) — 기본 미디움
+  if((parent==='PANTS'||parent==='SHORTS')&&g.hasOwnProperty('rise')){const rv=($('#cat-rise')&&$('#cat-rise').value)||'mid';g.rise=rv;}
   g.material.semi_sheer=+$('#sheer').value/100;
   g.material.shimmer=+$('#shimmer').value/100;
   g.material.shell_ref=!!plan.shell;
@@ -1005,11 +1008,13 @@ function subDirective(parent,sub){
 function garmentParts(cat,g){
   const parts=[`category ${cat.parent||''} / ${cat.sub||''}`.trim()];
   const add=(k,lab)=>{if(g[k])parts.push(`${lab||k} ${g[k]}`);};
+  const riseText=r=>({high:'HIGH-WAIST rise — waistband sits at the natural waist / above the navel',mid:'MID-RISE — waistband sits just below the navel at a standard height',low:'LOW-RISE — waistband sits low on the hips, below the navel'}[r]||'');
+  const addRise=()=>{if(g.rise){const t=riseText(g.rise);if(t)parts.push(t);}};
   add('silhouette');add('length');add('fit');
   if(cat.parent==='OUTERWEAR'){add('neckline');add('collar');add('sleeve');const q=g.quilting||{};const qd=[q.type,q.scale&&q.scale+' scale',q.puffiness&&q.puffiness+' volume'].filter(Boolean).join(', ');if(qd)parts.push('quilting '+qd);}
   if(cat.parent==='TOP'){add('neckline');add('collar');add('sleeve');add('cuff');add('hem');}
-  if(cat.parent==='PANTS'){add('rise');add('leg','leg shape');add('hem');add('pleats');}
-  if(cat.parent==='SHORTS'){add('rise');add('hem');}
+  if(cat.parent==='PANTS'){addRise();add('leg','leg shape');add('hem');add('pleats');}
+  if(cat.parent==='SHORTS'){addRise();add('hem');}
   if(cat.parent==='SKIRT'){add('pleats');add('slit');add('hem');add('drape');}
   if(cat.parent==='DRESS'){add('neckline');add('collar');add('sleeve');add('skirt_shape','skirt shape');add('pleats');add('slit');}
   add('waist');add('pocket','pockets');
@@ -1384,6 +1389,7 @@ function applyCategory(reset){
   // 카테고리별 사이드 툴 노출: Sheer(시스루)=바지 제외, 가슴 로고=하의/스커트 제외
   const show=(id,on)=>{const el=$(id);if(el)el.style.display=on?'':'none';};
   show('#sheer-wrap', parent!=='PANTS'&&parent!=='SHORTS');
+  show('#rise-wrap', parent==='PANTS'||parent==='SHORTS');
   show('#logogen-wrap', parent==='OUTERWEAR'||parent==='TOP'||parent==='DRESS');
   if(reset){state.brief.keep=new Set(C.keepDefault);state.brief.replace=new Set(C.replaceDefault);state.brief.adopt=new Set(C.adoptDefault);state.aiAttrs={};}
   renderPills();refreshJSON(true);
@@ -1786,6 +1792,7 @@ function wire(){
   $('#season').addEventListener('change',renderPicks);
   $('#cat-parent').addEventListener('change',()=>applyCategory(true));
   $('#cat-sub').addEventListener('change',()=>refreshJSON());
+  $('#cat-rise').addEventListener('change',()=>refreshJSON());
   $('#model-source').addEventListener('change',()=>updatePromptPrev());
   $('#gen-gender').addEventListener('change',()=>{updateGenderUI();updatePromptPrev();});
   $('#style-vary').addEventListener('change',()=>refreshJSON(true));
