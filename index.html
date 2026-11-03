@@ -225,7 +225,7 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 </div>
 <header>
   <div class="bar">
-    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v6</small></div>
+    <div class="wordmark">Duvetica<small>AI Image Design Studio</small><small class="team">소비자전략팀</small><small class="ver">v8</small></div>
     <nav id="nav">
       <button data-v="lib" class="on">라이브러리</button>
       <button data-v="gen">생성</button>
@@ -869,8 +869,7 @@ function computePlan(){
   const noun=CATEGORIES[$('#cat-parent').value].noun;
   const sel=($('#model-source')&&$('#model-source').value)||'idol';
   let modelMode=model?'image':sel; // image | preserve | idol
-  // B안: 남성은 모델 얼굴 합성(image) 대신 남성 프롬프트로 전신을 한 씬으로 새로 생성 → 합성 이질감 제거
-  if(isMaleCtx()&&modelMode==='image')modelMode='idol';
+  // 모델 이미지를 선택하면 성별과 무관하게 그 얼굴을 유지(image 모드 유지). 선택 안 하면 성별 기본 프롬프트.
   const bal=+($('#balance')?$('#balance').value:35);
   const images=[],roles=[];
   const designRole=`${noun} reference — adopt its silhouette, neckline, collar and distinctive design for the ${noun}`;
@@ -881,7 +880,7 @@ function computePlan(){
   const designRefs=refs.filter(r=>!r.detail);
   let refLed=false;
   if(modelMode==='image'){
-    images.push(model.dataUrl);roles.push('THE MODEL to keep and dress — the output MUST show this exact person (face, hair, skin tone, body), wearing the new garment');
+    images.push(model.dataUrl);roles.push('THE MODEL — the output MUST show this EXACT same person from this image: preserve their face, facial features, bone structure, eyes, nose, lips, eyebrows, skin tone, hairstyle and hair colour IDENTICALLY (same identity, like the same photo). Only re-dress them in the new garment and adjust pose. Do NOT change, beautify, age, slim or swap the face.');
     if(line){images.push(line.dataUrl);roles.push(`DUVETICA base form — source of the ${noun} design, outfit styling, pose and background (its person is NOT used)`);}
     pushList(refs);pushShell();
   }else if(modelMode==='preserve'){
@@ -1030,11 +1029,11 @@ function jsonToPrompt(J,plan){
   if(cat.parent==='OUTERWEAR')S.push(DNA_OUTER); // 다운·퀼팅·로프트는 아우터에서만
   else if(cat.parent)S.push(`CATEGORY NOTE — this is a ${noun}, NOT outerwear. Apply the DUVETICA premium aesthetic (clean construction, refined materials, modern proportions) but do NOT add down insulation, puffer padding, loft or quilting unless it is explicitly part of the requested design.`);
   if(mode==='image'){
-    S.push(`Show the EXACT person from image 1 — keep their face, hair, skin tone and body identical — now wearing a newly designed DUVETICA ${noun}. Do not change who the person is; this is a dressing/try-on task.`);
+    S.push(`IDENTITY LOCK — the person in the output MUST be the EXACT SAME individual as in image 1. Keep their face 100% identical: same facial features, bone structure, eye shape, nose, lips, eyebrows, skin tone, hairstyle and hair colour — as if it is the same person in the same photoshoot. This is a dressing / virtual try-on task: change ONLY the clothing (and pose/framing if needed), never the person's identity or face. Do NOT generate a different or 'improved' face, do NOT beautify, slim, age or alter the face in any way.`);
     S.push(`${noun.toUpperCase()} DESIGN — construct the new ${noun} from image 2 (the DUVETICA base form) together with the reference image(s), balanced per DESIGN BALANCE below.`);
     adoptClauses(J,noun).forEach(c=>S.push(c));
-    if((J.style_vary||'fixed')==='fixed')S.push(`STYLING & POSE — follow the outfit styling, pose and framing of image 2, but the person is always the model from image 1.`);
-    else S.push(`STYLING — keep the person from image 1; use image 2 for the garment design only, and restyle the rest of the look per STYLING VARIATION below.`);
+    if((J.style_vary||'fixed')==='fixed')S.push(`STYLING & POSE — follow the outfit styling, pose and framing of image 2, but the person (face and identity) is ALWAYS the exact model from image 1 per the IDENTITY LOCK above.`);
+    else S.push(`STYLING — keep the exact person and face from image 1 (IDENTITY LOCK above); use image 2 for the garment design only, and restyle the outfit/pose per STYLING VARIATION below. The face must stay identical even while the styling changes.`);
   }else if(mode==='idol'){
     if(baseModelPromptFor())S.push(`SUBJECT / MODEL — ${baseModelPromptFor().trim()}`);
     if(plan&&plan.refLed)S.push(`${noun.toUpperCase()} DESIGN — build the ${noun} PRIMARILY from the reference image(s) (image 1): take their overall shape, silhouette and neckline. Use the DUVETICA base form only for brand quilting quality and premium finishing, NOT for silhouette.`);
@@ -1534,7 +1533,10 @@ function renderVersions(){const el=$('#edit-vers');el.innerHTML=editVersions().s
   $$('#edit-vers img').forEach(im=>im.onclick=()=>{editShown=im.dataset.ver;const v=state.gallery.find(g=>g.id===editShown);$('#edit-prev').innerHTML=`<img src="${v.logoUrl||v.dataUrl}">`;$$('#edit-vers img').forEach(x=>x.classList.toggle('on',x.dataset.ver===editShown));});}
 async function runEdit(kind,opt){
   const cur=state.gallery.find(g=>g.id===editShown)||editG;let prompt,imgs=[cur.dataUrl];
-  if(kind==='model'){const m=state.models.find(x=>x.id===opt.modelId);imgs.push(m.dataUrl);prompt='Keep the garment in the first image EXACTLY the same (identical design, color, construction). The output MUST depict the exact person from the SECOND image — their face, hair, skin tone and body — replacing the first image model entirely. Only the pose may follow the first image. Clean studio lighting, neutral background. Do not render legible logo text.';}
+  if(kind==='model'){const m=state.models.find(x=>x.id===opt.modelId);
+    // 이미지 순서: image1=모델(캔버스로 얼굴 지배), image2=기존 생성물(옷 소스) → 얼굴이 확실히 살아남
+    imgs=[m.dataUrl,cur.dataUrl];
+    prompt='IDENTITY LOCK — the output MUST be the EXACT SAME person as in image 1: keep their face 100% identical — same facial features, bone structure, eye shape, nose, lips, eyebrows, skin tone, hairstyle and hair colour, as if it is the same person in the same photoshoot. Do NOT change, beautify, slim, age or swap the face. GARMENT — dress this person from image 1 in the EXACT SAME outfit/garment shown on the model in image 2 (identical garment design, colour, construction and styling). This is a virtual try-on: take the PERSON and FACE from image 1, and the CLOTHING from image 2. Full-length editorial pose, clean studio lighting, neutral seamless background. Do not render any legible logo text.';}
   else if(kind==='cody')prompt=`Keep the DUVETICA main garment identical. Restyle only the coordinating items — the other clothing, footwear and accessories — to: ${opt.text}. Keep the same model and framing. Do not render legible logo text.`;
   else prompt=`Keep the garment design, silhouette and model identical. Re-render only the surface finish and padding — fabric sheer: ${sheerText(opt.sheer)}; surface: ${shimmerText(opt.shimmer)}; down fill volume: ${volumeText(opt.volume)}. Keep the original color. Do not render legible logo text.`;
   const prev=$('#edit-prev');prev.innerHTML=`<div class="load"><div class="spinner"></div><span>수정 중…</span></div>`;
